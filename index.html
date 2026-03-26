@@ -16,9 +16,9 @@
         .btn-success { background-color: #28a745; }
         .btn-success:active { background-color: #218838; }
         .btn-camara { background-color: #6c757d; }
+        .btn-info { background-color: #17a2b8; margin-top: 20px; } /* Estilo del nuevo botón */
         .status { text-align: center; margin-top: 20px; padding: 10px; border-radius: 5px; background-color: #e2e3e5; color: #383d41; font-weight: bold;}
         
-        /* Estilos para la cámara integrada */
         #visor-camara { width: 100%; border-radius: 5px; background-color: #000; display: none; margin-bottom: 10px; }
         #galeria-miniaturas { display: flex; gap: 10px; margin-top: 10px; flex-wrap: wrap; }
         .miniatura { width: 60px; height: 60px; object-fit: cover; border-radius: 5px; border: 2px solid #0056b3; }
@@ -46,7 +46,6 @@
 
         <div class="form-group" style="border-top: 1px solid #eee; padding-top: 15px;">
             <label>Cámara Integrada:</label>
-            
             <video id="visor-camara" autoplay playsinline muted></video>
             <canvas id="canvas-foto" style="display: none;"></canvas>
 
@@ -57,6 +56,8 @@
         </div>
 
         <button id="btn-guardar" class="btn-success" style="margin-top: 20px;">💾 Guardar Registro en Celular</button>
+        
+        <button id="btn-exportar" class="btn-info">📊 Exportar Datos a Excel (CSV)</button>
     </div>
 
     <div class="status" id="estado-app">
@@ -64,7 +65,6 @@
     </div>
 
     <script>
-        // 1. MODO OFFLINE
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
                 navigator.serviceWorker.register('sw.js')
@@ -76,7 +76,6 @@
             });
         }
 
-        // 2. BASE DE DATOS LOCAL
         let db;
         const request = indexedDB.open("InspeccionDB", 1);
         request.onupgradeneeded = function(event) {
@@ -85,7 +84,6 @@
         };
         request.onsuccess = function(event) { db = event.target.result; };
 
-        // 3. GPS
         let latitudActual = null;
         let longitudActual = null;
         document.getElementById('btn-ubicacion').addEventListener('click', () => {
@@ -105,7 +103,6 @@
             );
         });
 
-        // 4. CÁMARA INTEGRADA
         const video = document.getElementById('visor-camara');
         const canvas = document.getElementById('canvas-foto');
         const btnEncender = document.getElementById('btn-encender-camara');
@@ -113,13 +110,11 @@
         const galeria = document.getElementById('galeria-miniaturas');
 
         let streamActual = null;
-        let fotosTomadasArray = []; // Guardamos las fotos aquí
+        let fotosTomadasArray = []; 
 
         btnEncender.addEventListener('click', async () => {
             try {
-                streamActual = await navigator.mediaDevices.getUserMedia({
-                    video: { facingMode: 'environment' } // Usa la cámara trasera
-                });
+                streamActual = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
                 video.srcObject = streamActual;
                 video.style.display = 'block';
                 btnCapturar.style.display = 'block';
@@ -144,19 +139,12 @@
             galeria.appendChild(imgMiniatura);
         });
 
-        // 5. GUARDAR DATOS
         document.getElementById('btn-guardar').addEventListener('click', () => {
             const titulo = document.getElementById('titulo').value;
             const descripcion = document.getElementById('descripcion').value;
             
-            if(!latitudActual || !longitudActual) {
-                alert("Por favor, obtén las coordenadas GPS primero.");
-                return;
-            }
-            if(!titulo) {
-                alert("Falta el título del punto.");
-                return;
-            }
+            if(!latitudActual || !longitudActual) { alert("Por favor, obtén las coordenadas GPS primero."); return; }
+            if(!titulo) { alert("Falta el título del punto."); return; }
 
             const nuevoRegistro = {
                 titulo: titulo,
@@ -164,7 +152,7 @@
                 latitud: latitudActual,
                 longitud: longitudActual,
                 fotos: fotosTomadasArray,
-                fecha: new Date().toISOString()
+                fecha: new Date().toLocaleString()
             };
 
             const transaction = db.transaction(["registros"], "readwrite");
@@ -173,8 +161,6 @@
 
             transaction.oncomplete = function() {
                 alert("✅ ¡Registro guardado en tu celular!");
-                
-                // Limpiar todo para la siguiente inspección
                 document.getElementById('titulo').value = "";
                 document.getElementById('descripcion').value = "";
                 latitudActual = null;
@@ -189,6 +175,45 @@
                     btnCapturar.style.display = 'none';
                     btnEncender.style.display = 'block';
                 }
+            };
+        });
+
+        // NUEVO: FUNCIÓN PARA EXPORTAR A EXCEL (CSV)
+        document.getElementById('btn-exportar').addEventListener('click', () => {
+            const transaction = db.transaction(["registros"], "readonly");
+            const store = transaction.objectStore("registros");
+            const request = store.getAll();
+
+            request.onsuccess = function() {
+                const registros = request.result;
+                if(registros.length === 0) {
+                    alert("⚠️ No hay ningún registro guardado para exportar.");
+                    return;
+                }
+
+                // Creamos los encabezados de las columnas para Excel
+                let csvContent = "data:text/csv;charset=utf-8,";
+                csvContent += "ID,Titulo,Descripcion,Latitud,Longitud,Fecha,Cantidad_Fotos\n";
+
+                // Recorremos cada registro guardado y lo agregamos como una fila
+                registros.forEach(r => {
+                    // Limpiamos comas y saltos de línea para que Excel no se confunda de celda
+                    const tituloLimpio = r.titulo.replace(/,/g, " ").replace(/\n/g, " ");
+                    const descLimpia = r.descripcion.replace(/,/g, " ").replace(/\n/g, " ");
+                    const numFotos = r.fotos ? r.fotos.length : 0;
+                    
+                    const fila = `${r.id},${tituloLimpio},${descLimpia},${r.latitud},${r.longitud},${r.fecha},${numFotos}`;
+                    csvContent += fila + "\n";
+                });
+
+                // Forzamos la descarga del archivo al celular
+                const encodedUri = encodeURI(csvContent);
+                const link = document.createElement("a");
+                link.setAttribute("href", encodedUri);
+                link.setAttribute("download", "Datos_Inspeccion.csv");
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
             };
         });
     </script>
