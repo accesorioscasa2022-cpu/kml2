@@ -50,7 +50,7 @@
     </div>
 
     <script>
-        // Este bloque es el corazón del modo Offline
+        // 1. MODO OFFLINE
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
                 navigator.serviceWorker.register('sw.js')
@@ -63,9 +63,103 @@
                         document.getElementById('estado-app').innerText = "⚠️ Error al cargar modo Offline";
                     });
             });
-        } else {
-            document.getElementById('estado-app').innerText = "Tu navegador no soporta el modo Offline";
         }
+
+        // 2. CREAR BASE DE DATOS LOCAL
+        let db;
+        const request = indexedDB.open("InspeccionDB", 1);
+
+        request.onupgradeneeded = function(event) {
+            db = event.target.result;
+            // Creamos la tabla donde se guardarán los datos de los caminos
+            db.createObjectStore("registros", { keyPath: "id", autoIncrement:true });
+        };
+
+        request.onsuccess = function(event) {
+            db = event.target.result;
+        };
+
+        // 3. ACTIVAR EL GPS (Funciona sin internet)
+        let latitudActual = null;
+        let longitudActual = null;
+
+        document.getElementById('btn-ubicacion').addEventListener('click', () => {
+            const textoCoordenadas = document.getElementById('coordenadas-texto');
+            textoCoordenadas.innerText = "Buscando señal GPS... 🛰️";
+
+            navigator.geolocation.getCurrentPosition(
+                (position) => {
+                    latitudActual = position.coords.latitude;
+                    longitudActual = position.coords.longitude;
+                    textoCoordenadas.innerText = `Latitud: ${latitudActual.toFixed(6)} | Longitud: ${longitudActual.toFixed(6)}`;
+                },
+                (error) => {
+                    textoCoordenadas.innerText = "⚠️ Error: Activa el GPS y permite la ubicación.";
+                },
+                { enableHighAccuracy: true } // Fuerza el uso del hardware GPS del celular
+            );
+        });
+
+        // 4. GUARDAR DATOS Y FOTOS EN EL CELULAR
+        document.getElementById('btn-guardar').addEventListener('click', async () => {
+            const titulo = document.getElementById('titulo').value;
+            const descripcion = document.getElementById('descripcion').value;
+            const inputFoto = document.getElementById('input-foto');
+            
+            if(!latitudActual || !longitudActual) {
+                alert("Por favor, presiona el botón de 'Obtener Coordenadas GPS' primero.");
+                return;
+            }
+            if(!titulo) {
+                alert("Por favor, ponle un título al punto.");
+                return;
+            }
+
+            // Convertir fotos a código para guardarlas en la base de datos
+            const leerFotoComoBase64 = (file) => {
+                return new Promise((resolve, reject) => {
+                    const reader = new FileReader();
+                    reader.onload = () => resolve(reader.result);
+                    reader.onerror = error => reject(error);
+                    reader.readAsDataURL(file);
+                });
+            };
+
+            let fotosArray = [];
+            for (let i = 0; i < inputFoto.files.length; i++) {
+                const base64 = await leerFotoComoBase64(inputFoto.files[i]);
+                fotosArray.push(base64);
+            }
+
+            const nuevoRegistro = {
+                titulo: titulo,
+                descripcion: descripcion,
+                latitud: latitudActual,
+                longitud: longitudActual,
+                fotos: fotosArray,
+                fecha: new Date().toISOString()
+            };
+
+            const transaction = db.transaction(["registros"], "readwrite");
+            const store = transaction.objectStore("registros");
+            store.add(nuevoRegistro);
+
+            transaction.oncomplete = function() {
+                alert("✅ ¡Registro de inspección guardado correctamente en tu celular!");
+                
+                // Limpiar todo para capturar el siguiente punto en la ruta
+                document.getElementById('titulo').value = "";
+                document.getElementById('descripcion').value = "";
+                document.getElementById('input-foto').value = "";
+                latitudActual = null;
+                longitudActual = null;
+                document.getElementById('coordenadas-texto').innerText = "Latitud: --- | Longitud: ---";
+            };
+            
+            transaction.onerror = function() {
+                alert("⚠️ Error al guardar el registro.");
+            };
+        });
     </script>
 </body>
 </html>
