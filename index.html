@@ -17,7 +17,7 @@
         .btn-success { background-color: #28a745; }
         .btn-camara { background-color: #6c757d; }
         .btn-info { background-color: #17a2b8; } 
-        .btn-warning { background-color: #fd7e14; color: white; margin-top: 10px; font-weight: bold; } /* Botón KMZ */
+        .btn-warning { background-color: #fd7e14; color: white; margin-top: 10px; font-weight: bold; }
         .status { text-align: center; margin-top: 20px; padding: 10px; border-radius: 5px; background-color: #e2e3e5; color: #383d41; font-weight: bold;}
         
         #visor-camara { width: 100%; border-radius: 5px; background-color: #000; display: none; margin-bottom: 10px; }
@@ -59,15 +59,13 @@
         <button id="btn-guardar" class="btn-success" style="margin-top: 20px;">💾 Guardar Registro en Celular</button>
         
         <div style="border-top: 2px dashed #ccc; margin-top: 25px; padding-top: 15px;">
-            <h3 style="text-align: center; margin-top: 0; color: #555;">Exportar Información</h3>
-            <button id="btn-exportar" class="btn-info">📊 1. Descargar Excel (CSV)</button>
-            <button id="btn-exportar-kmz" class="btn-warning">🌍 2. Generar Reporte KMZ (Google Earth)</button>
+            <h3 style="text-align: center; margin-top: 0; color: #555;">Compartir / Exportar</h3>
+            <button id="btn-exportar" class="btn-info">📊 1. Compartir Excel (CSV)</button>
+            <button id="btn-exportar-kmz" class="btn-warning">🌍 2. Compartir Reporte KMZ</button>
         </div>
     </div>
 
-    <div class="status" id="estado-app">
-        Conectando...
-    </div>
+    <div class="status" id="estado-app">Conectando...</div>
 
     <script>
         if ('serviceWorker' in navigator) {
@@ -164,29 +162,48 @@
             };
         });
 
-        // FUNCIÓN EXCEL
+        // --------------------------------------------------------
+        // FUNCIÓN: COMPARTIR O DESCARGAR EXCEL
+        // --------------------------------------------------------
         document.getElementById('btn-exportar').addEventListener('click', () => {
             const transaction = db.transaction(["registros"], "readonly");
             const store = transaction.objectStore("registros");
             const request = store.getAll();
             request.onsuccess = function() {
                 const registros = request.result;
-                if(registros.length === 0) { alert("No hay datos."); return; }
-                let csvContent = "data:text/csv;charset=utf-8,ID,Titulo,Descripcion,Latitud,Longitud,Fecha,Cantidad_Fotos\n";
+                if(registros.length === 0) { alert("No hay datos para exportar."); return; }
+                
+                let csvContent = "ID,Titulo,Descripcion,Latitud,Longitud,Fecha,Cantidad_Fotos\n";
                 registros.forEach(r => {
                     const tituloLimpio = r.titulo.replace(/,/g, " ").replace(/\n/g, " ");
                     const descLimpia = r.descripcion.replace(/,/g, " ").replace(/\n/g, " ");
                     csvContent += `${r.id},${tituloLimpio},${descLimpia},${r.latitud},${r.longitud},${r.fecha},${r.fotos ? r.fotos.length : 0}\n`;
                 });
-                const encodedUri = encodeURI(csvContent);
-                const link = document.createElement("a");
-                link.setAttribute("href", encodedUri);
-                link.setAttribute("download", "Datos_Inspeccion.csv");
-                document.body.appendChild(link); link.click(); document.body.removeChild(link);
+
+                // Crear el archivo físico CSV
+                const archivoCSV = new File([csvContent], "Datos_Inspeccion.csv", { type: "text/csv" });
+
+                // Intentar abrir menú de compartir de WhatsApp/Correo
+                if (navigator.canShare && navigator.canShare({ files: [archivoCSV] })) {
+                    navigator.share({
+                        title: 'Datos de Inspección',
+                        text: 'Aquí están los datos exportados en Excel.',
+                        files: [archivoCSV]
+                    }).catch(console.error);
+                } else {
+                    // Si la compu no tiene WhatsApp, simplemente lo descarga
+                    const url = URL.createObjectURL(archivoCSV);
+                    const link = document.createElement("a");
+                    link.href = url;
+                    link.download = "Datos_Inspeccion.csv";
+                    document.body.appendChild(link); link.click(); document.body.removeChild(link);
+                }
             };
         });
 
-        // NUEVA FUNCIÓN: GENERAR KMZ CON MACHOTE
+        // --------------------------------------------------------
+        // FUNCIÓN: COMPARTIR O DESCARGAR KMZ
+        // --------------------------------------------------------
         document.getElementById('btn-exportar-kmz').addEventListener('click', () => {
             if (typeof JSZip === 'undefined') {
                 alert("⚠️ Cargando herramienta. Asegúrate de tener internet esta primera vez para descargarla.");
@@ -199,13 +216,10 @@
 
             request.onsuccess = function() {
                 const registros = request.result;
-                if(registros.length === 0) {
-                    alert("⚠️ No hay ningún registro guardado para exportar.");
-                    return;
-                }
+                if(registros.length === 0) { alert("No hay datos para exportar."); return; }
 
                 const zip = new JSZip();
-                const carpetaFotos = zip.folder("images"); // Carpeta interna para las fotos
+                const carpetaFotos = zip.folder("images");
 
                 let kmlContent = `<?xml version="1.0" encoding="UTF-8"?>
                 <kml xmlns="http://www.opengis.net/kml/2.2">
@@ -214,8 +228,7 @@
                     <description>Generado desde App Offline</description>
                 `;
 
-                registros.forEach((r, index) => {
-                    // AQUÍ ESTÁ TU MACHOTE (Diseño HTML de la burbuja)
+                registros.forEach((r) => {
                     let machoteHTML = `
                         <div style="font-family: Arial, sans-serif; max-width: 400px;">
                             <h3 style="color: #004494; border-bottom: 2px solid #fd7e14; padding-bottom: 5px;">${r.titulo}</h3>
@@ -226,23 +239,17 @@
                             </table>
                     `;
 
-                    // Agregar las fotos al paquete y al machote
                     if (r.fotos && r.fotos.length > 0) {
                         r.fotos.forEach((fotoBase64, fIndex) => {
                             const base64Data = fotoBase64.split(',')[1];
                             const nombreFoto = `foto_Punto${r.id}_${fIndex}.jpg`;
-                            
-                            // Guardar foto en la carpeta del ZIP
                             carpetaFotos.file(nombreFoto, base64Data, {base64: true});
-                            
-                            // Insertar foto en el machote de Google Earth
                             machoteHTML += `<img src="images/${nombreFoto}" style="width: 100%; margin-bottom: 10px; border-radius: 5px; border: 1px solid #ccc;">`;
                         });
                     }
 
-                    machoteHTML += `</div>`; // Cerrar machote
+                    machoteHTML += `</div>`;
 
-                    // Agregar el punto al archivo KML
                     kmlContent += `
                     <Placemark>
                       <name>${r.titulo}</name>
@@ -254,22 +261,29 @@
                     `;
                 });
 
-                kmlContent += `
-                  </Document>
-                </kml>`;
-
-                // Guardar el archivo de texto KML dentro del ZIP
+                kmlContent += `</Document></kml>`;
                 zip.file("doc.kml", kmlContent);
 
-                // Empaquetar todo y descargarlo como KMZ
+                // Empaquetar y Compartir
                 zip.generateAsync({type:"blob"}).then(function(content) {
-                    const url = URL.createObjectURL(content);
-                    const a = document.createElement("a");
-                    a.href = url;
-                    a.download = "Reporte_Inspeccion.kmz";
-                    document.body.appendChild(a);
-                    a.click();
-                    document.body.removeChild(a);
+                    // Crear el archivo físico KMZ
+                    const archivoKMZ = new File([content], "Reporte_Inspeccion.kmz", { type: "application/vnd.google-earth.kmz" });
+
+                    // Intentar abrir menú de compartir de WhatsApp/Correo
+                    if (navigator.canShare && navigator.canShare({ files: [archivoKMZ] })) {
+                        navigator.share({
+                            title: 'Reporte de Inspección KMZ',
+                            text: 'Te comparto el reporte KMZ con fotografías.',
+                            files: [archivoKMZ]
+                        }).catch(console.error);
+                    } else {
+                        // Descarga normal si no se puede compartir
+                        const url = URL.createObjectURL(archivoKMZ);
+                        const a = document.createElement("a");
+                        a.href = url;
+                        a.download = "Reporte_Inspeccion.kmz";
+                        document.body.appendChild(a); a.click(); document.body.removeChild(a);
+                    }
                 });
             };
         });
