@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Inspección de Caminos</title>
     <link rel="manifest" href="manifest.json">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     <style>
         body { font-family: sans-serif; padding: 20px; max-width: 600px; margin: auto; background-color: #f4f4f9;}
         .card { background: white; padding: 20px; border-radius: 10px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); }
@@ -14,9 +15,9 @@
         button { width: 100%; padding: 12px; background-color: #0056b3; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 16px; margin-top: 10px;}
         button:active { background-color: #004494; }
         .btn-success { background-color: #28a745; }
-        .btn-success:active { background-color: #218838; }
         .btn-camara { background-color: #6c757d; }
-        .btn-info { background-color: #17a2b8; margin-top: 20px; } /* Estilo del nuevo botón */
+        .btn-info { background-color: #17a2b8; } 
+        .btn-warning { background-color: #fd7e14; color: white; margin-top: 10px; font-weight: bold; } /* Botón KMZ */
         .status { text-align: center; margin-top: 20px; padding: 10px; border-radius: 5px; background-color: #e2e3e5; color: #383d41; font-weight: bold;}
         
         #visor-camara { width: 100%; border-radius: 5px; background-color: #000; display: none; margin-bottom: 10px; }
@@ -57,7 +58,11 @@
 
         <button id="btn-guardar" class="btn-success" style="margin-top: 20px;">💾 Guardar Registro en Celular</button>
         
-        <button id="btn-exportar" class="btn-info">📊 Exportar Datos a Excel (CSV)</button>
+        <div style="border-top: 2px dashed #ccc; margin-top: 25px; padding-top: 15px;">
+            <h3 style="text-align: center; margin-top: 0; color: #555;">Exportar Información</h3>
+            <button id="btn-exportar" class="btn-info">📊 1. Descargar Excel (CSV)</button>
+            <button id="btn-exportar-kmz" class="btn-warning">🌍 2. Generar Reporte KMZ (Google Earth)</button>
+        </div>
     </div>
 
     <div class="status" id="estado-app">
@@ -88,17 +93,14 @@
         let longitudActual = null;
         document.getElementById('btn-ubicacion').addEventListener('click', () => {
             const textoCoordenadas = document.getElementById('coordenadas-texto');
-            textoCoordenadas.innerText = "Buscando señal GPS... 🛰️ (Espera)";
-
+            textoCoordenadas.innerText = "Buscando señal GPS... 🛰️";
             navigator.geolocation.getCurrentPosition(
                 (position) => {
                     latitudActual = position.coords.latitude;
                     longitudActual = position.coords.longitude;
                     textoCoordenadas.innerText = `Lat: ${latitudActual.toFixed(6)} | Lon: ${longitudActual.toFixed(6)}`;
                 },
-                (error) => {
-                    textoCoordenadas.innerText = "⚠️ Error: GPS desactivado o sin permiso.";
-                },
+                (error) => { textoCoordenadas.innerText = "⚠️ Error GPS"; },
                 { enableHighAccuracy: true }
             );
         });
@@ -108,7 +110,6 @@
         const btnEncender = document.getElementById('btn-encender-camara');
         const btnCapturar = document.getElementById('btn-capturar-foto');
         const galeria = document.getElementById('galeria-miniaturas');
-
         let streamActual = null;
         let fotosTomadasArray = []; 
 
@@ -119,9 +120,7 @@
                 video.style.display = 'block';
                 btnCapturar.style.display = 'block';
                 btnEncender.style.display = 'none';
-            } catch (err) {
-                alert("⚠️ No se pudo acceder a la cámara. Revisa los permisos.");
-            }
+            } catch (err) { alert("⚠️ Revisa los permisos de la cámara."); }
         });
 
         btnCapturar.addEventListener('click', () => {
@@ -129,10 +128,8 @@
             canvas.height = video.videoHeight;
             const contexto = canvas.getContext('2d');
             contexto.drawImage(video, 0, 0, canvas.width, canvas.height);
-
             const fotoBase64 = canvas.toDataURL('image/jpeg', 0.8);
             fotosTomadasArray.push(fotoBase64);
-
             const imgMiniatura = document.createElement('img');
             imgMiniatura.src = fotoBase64;
             imgMiniatura.className = 'miniatura';
@@ -142,17 +139,12 @@
         document.getElementById('btn-guardar').addEventListener('click', () => {
             const titulo = document.getElementById('titulo').value;
             const descripcion = document.getElementById('descripcion').value;
-            
-            if(!latitudActual || !longitudActual) { alert("Por favor, obtén las coordenadas GPS primero."); return; }
-            if(!titulo) { alert("Falta el título del punto."); return; }
+            if(!latitudActual || !longitudActual) { alert("Obtén coordenadas primero."); return; }
+            if(!titulo) { alert("Falta título."); return; }
 
             const nuevoRegistro = {
-                titulo: titulo,
-                descripcion: descripcion,
-                latitud: latitudActual,
-                longitud: longitudActual,
-                fotos: fotosTomadasArray,
-                fecha: new Date().toLocaleString()
+                titulo: titulo, descripcion: descripcion, latitud: latitudActual, longitud: longitudActual,
+                fotos: fotosTomadasArray, fecha: new Date().toLocaleString()
             };
 
             const transaction = db.transaction(["registros"], "readwrite");
@@ -160,26 +152,47 @@
             store.add(nuevoRegistro);
 
             transaction.oncomplete = function() {
-                alert("✅ ¡Registro guardado en tu celular!");
-                document.getElementById('titulo').value = "";
-                document.getElementById('descripcion').value = "";
-                latitudActual = null;
-                longitudActual = null;
+                alert("✅ ¡Guardado!");
+                document.getElementById('titulo').value = ""; document.getElementById('descripcion').value = "";
+                latitudActual = null; longitudActual = null;
                 document.getElementById('coordenadas-texto').innerText = "Latitud: --- | Longitud: ---";
-                fotosTomadasArray = [];
-                galeria.innerHTML = "";
-                
+                fotosTomadasArray = []; galeria.innerHTML = "";
                 if(streamActual) {
                     streamActual.getTracks().forEach(track => track.stop());
-                    video.style.display = 'none';
-                    btnCapturar.style.display = 'none';
-                    btnEncender.style.display = 'block';
+                    video.style.display = 'none'; btnCapturar.style.display = 'none'; btnEncender.style.display = 'block';
                 }
             };
         });
 
-        // NUEVO: FUNCIÓN PARA EXPORTAR A EXCEL (CSV)
+        // FUNCIÓN EXCEL
         document.getElementById('btn-exportar').addEventListener('click', () => {
+            const transaction = db.transaction(["registros"], "readonly");
+            const store = transaction.objectStore("registros");
+            const request = store.getAll();
+            request.onsuccess = function() {
+                const registros = request.result;
+                if(registros.length === 0) { alert("No hay datos."); return; }
+                let csvContent = "data:text/csv;charset=utf-8,ID,Titulo,Descripcion,Latitud,Longitud,Fecha,Cantidad_Fotos\n";
+                registros.forEach(r => {
+                    const tituloLimpio = r.titulo.replace(/,/g, " ").replace(/\n/g, " ");
+                    const descLimpia = r.descripcion.replace(/,/g, " ").replace(/\n/g, " ");
+                    csvContent += `${r.id},${tituloLimpio},${descLimpia},${r.latitud},${r.longitud},${r.fecha},${r.fotos ? r.fotos.length : 0}\n`;
+                });
+                const encodedUri = encodeURI(csvContent);
+                const link = document.createElement("a");
+                link.setAttribute("href", encodedUri);
+                link.setAttribute("download", "Datos_Inspeccion.csv");
+                document.body.appendChild(link); link.click(); document.body.removeChild(link);
+            };
+        });
+
+        // NUEVA FUNCIÓN: GENERAR KMZ CON MACHOTE
+        document.getElementById('btn-exportar-kmz').addEventListener('click', () => {
+            if (typeof JSZip === 'undefined') {
+                alert("⚠️ Cargando herramienta. Asegúrate de tener internet esta primera vez para descargarla.");
+                return;
+            }
+
             const transaction = db.transaction(["registros"], "readonly");
             const store = transaction.objectStore("registros");
             const request = store.getAll();
@@ -191,29 +204,73 @@
                     return;
                 }
 
-                // Creamos los encabezados de las columnas para Excel
-                let csvContent = "data:text/csv;charset=utf-8,";
-                csvContent += "ID,Titulo,Descripcion,Latitud,Longitud,Fecha,Cantidad_Fotos\n";
+                const zip = new JSZip();
+                const carpetaFotos = zip.folder("images"); // Carpeta interna para las fotos
 
-                // Recorremos cada registro guardado y lo agregamos como una fila
-                registros.forEach(r => {
-                    // Limpiamos comas y saltos de línea para que Excel no se confunda de celda
-                    const tituloLimpio = r.titulo.replace(/,/g, " ").replace(/\n/g, " ");
-                    const descLimpia = r.descripcion.replace(/,/g, " ").replace(/\n/g, " ");
-                    const numFotos = r.fotos ? r.fotos.length : 0;
-                    
-                    const fila = `${r.id},${tituloLimpio},${descLimpia},${r.latitud},${r.longitud},${r.fecha},${numFotos}`;
-                    csvContent += fila + "\n";
+                let kmlContent = `<?xml version="1.0" encoding="UTF-8"?>
+                <kml xmlns="http://www.opengis.net/kml/2.2">
+                  <Document>
+                    <name>Reporte de Inspección</name>
+                    <description>Generado desde App Offline</description>
+                `;
+
+                registros.forEach((r, index) => {
+                    // AQUÍ ESTÁ TU MACHOTE (Diseño HTML de la burbuja)
+                    let machoteHTML = `
+                        <div style="font-family: Arial, sans-serif; max-width: 400px;">
+                            <h3 style="color: #004494; border-bottom: 2px solid #fd7e14; padding-bottom: 5px;">${r.titulo}</h3>
+                            <table border="1" style="border-collapse: collapse; width: 100%; margin-bottom: 15px;">
+                                <tr><td style="padding: 8px; background: #f4f4f4; width: 35%;"><b>Fecha</b></td><td style="padding: 8px;">${r.fecha}</td></tr>
+                                <tr><td style="padding: 8px; background: #f4f4f4;"><b>Coordenadas</b></td><td style="padding: 8px;">${r.latitud}, ${r.longitud}</td></tr>
+                                <tr><td style="padding: 8px; background: #f4f4f4;"><b>Notas</b></td><td style="padding: 8px;">${r.descripcion}</td></tr>
+                            </table>
+                    `;
+
+                    // Agregar las fotos al paquete y al machote
+                    if (r.fotos && r.fotos.length > 0) {
+                        r.fotos.forEach((fotoBase64, fIndex) => {
+                            const base64Data = fotoBase64.split(',')[1];
+                            const nombreFoto = `foto_Punto${r.id}_${fIndex}.jpg`;
+                            
+                            // Guardar foto en la carpeta del ZIP
+                            carpetaFotos.file(nombreFoto, base64Data, {base64: true});
+                            
+                            // Insertar foto en el machote de Google Earth
+                            machoteHTML += `<img src="images/${nombreFoto}" style="width: 100%; margin-bottom: 10px; border-radius: 5px; border: 1px solid #ccc;">`;
+                        });
+                    }
+
+                    machoteHTML += `</div>`; // Cerrar machote
+
+                    // Agregar el punto al archivo KML
+                    kmlContent += `
+                    <Placemark>
+                      <name>${r.titulo}</name>
+                      <description><![CDATA[${machoteHTML}]]></description>
+                      <Point>
+                        <coordinates>${r.longitud},${r.latitud},0</coordinates>
+                      </Point>
+                    </Placemark>
+                    `;
                 });
 
-                // Forzamos la descarga del archivo al celular
-                const encodedUri = encodeURI(csvContent);
-                const link = document.createElement("a");
-                link.setAttribute("href", encodedUri);
-                link.setAttribute("download", "Datos_Inspeccion.csv");
-                document.body.appendChild(link);
-                link.click();
-                document.body.removeChild(link);
+                kmlContent += `
+                  </Document>
+                </kml>`;
+
+                // Guardar el archivo de texto KML dentro del ZIP
+                zip.file("doc.kml", kmlContent);
+
+                // Empaquetar todo y descargarlo como KMZ
+                zip.generateAsync({type:"blob"}).then(function(content) {
+                    const url = URL.createObjectURL(content);
+                    const a = document.createElement("a");
+                    a.href = url;
+                    a.download = "Reporte_Inspeccion.kmz";
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                });
             };
         });
     </script>
