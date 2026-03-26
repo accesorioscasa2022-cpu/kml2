@@ -15,34 +15,48 @@
         button:active { background-color: #004494; }
         .btn-success { background-color: #28a745; }
         .btn-success:active { background-color: #218838; }
-        .status { margin-top: 20px; padding: 10px; background-color: #e2e3e5; border-radius: 5px; text-align: center; font-weight: bold;}
+        .btn-camara { background-color: #6c757d; }
+        .status { text-align: center; margin-top: 20px; padding: 10px; border-radius: 5px; background-color: #e2e3e5; color: #383d41; font-weight: bold;}
+        
+        /* Estilos para la cámara integrada */
+        #visor-camara { width: 100%; border-radius: 5px; background-color: #000; display: none; margin-bottom: 10px; }
+        #galeria-miniaturas { display: flex; gap: 10px; margin-top: 10px; flex-wrap: wrap; }
+        .miniatura { width: 60px; height: 60px; object-fit: cover; border-radius: 5px; border: 2px solid #0056b3; }
     </style>
 </head>
 <body>
-    <div class="card">
-        <h2>Inspección en Campo</h2>
 
+    <h2 style="text-align: center; color: #333;">Registro de Inspección</h2>
+
+    <div class="card">
         <div class="form-group">
-            <label for="titulo">Título del Punto:</label>
-            <input type="text" id="titulo" placeholder="Ej. Km 2+500 - Fisuras en pavimento">
+            <label for="titulo">Punto de Inspección (Ej. Km 12+500):</label>
+            <input type="text" id="titulo" placeholder="Identificador del punto">
         </div>
 
         <div class="form-group">
-            <label for="descripcion">Descripción / Notas:</label>
-            <textarea id="descripcion" rows="3" placeholder="Observaciones del tramo..."></textarea>
+            <label for="descripcion">Descripción / Observaciones:</label>
+            <textarea id="descripcion" rows="3" placeholder="Detalles de la anomalía..."></textarea>
         </div>
 
         <div class="form-group">
             <button id="btn-ubicacion">📍 Obtener Coordenadas GPS</button>
-            <p id="coordenadas-texto" style="text-align: center; color: #666;">Latitud: --- | Longitud: ---</p>
+            <p id="coordenadas-texto" style="text-align: center; color: #666; font-weight: bold; margin-top: 10px;">Latitud: --- | Longitud: ---</p>
         </div>
 
-        <div class="form-group">
-            <label>Fotos del Punto:</label>
-            <input type="file" id="input-foto" accept="image/*" capture="environment" multiple>
+        <div class="form-group" style="border-top: 1px solid #eee; padding-top: 15px;">
+            <label>Cámara Integrada:</label>
+            
+            <video id="visor-camara" autoplay playsinline></video>
+            <canvas id="canvas-foto" style="display: none;"></canvas>
+
+            <button id="btn-encender-camara" class="btn-camara">📷 Encender Cámara</button>
+            <button id="btn-capturar-foto" style="background-color: #ffc107; color: #000; display: none;">📸 Capturar Foto</button>
+
+            <div id="galeria-miniaturas"></div>
         </div>
 
-        <button id="btn-guardar" class="btn-success">💾 Guardar Registro (Local)</button>
+        <button id="btn-guardar" class="btn-success" style="margin-top: 20px;">💾 Guardar Registro en Celular</button>
     </div>
 
     <div class="status" id="estado-app">
@@ -58,77 +72,90 @@
                         document.getElementById('estado-app').innerText = "✅ App lista para uso Offline";
                         document.getElementById('estado-app').style.backgroundColor = "#d4edda";
                         document.getElementById('estado-app').style.color = "#155724";
-                    })
-                    .catch(err => {
-                        document.getElementById('estado-app').innerText = "⚠️ Error al cargar modo Offline";
                     });
             });
         }
 
-        // 2. CREAR BASE DE DATOS LOCAL
+        // 2. BASE DE DATOS LOCAL
         let db;
         const request = indexedDB.open("InspeccionDB", 1);
-
         request.onupgradeneeded = function(event) {
             db = event.target.result;
-            // Creamos la tabla donde se guardarán los datos de los caminos
             db.createObjectStore("registros", { keyPath: "id", autoIncrement:true });
         };
+        request.onsuccess = function(event) { db = event.target.result; };
 
-        request.onsuccess = function(event) {
-            db = event.target.result;
-        };
-
-        // 3. ACTIVAR EL GPS (Funciona sin internet)
+        // 3. GPS
         let latitudActual = null;
         let longitudActual = null;
-
         document.getElementById('btn-ubicacion').addEventListener('click', () => {
             const textoCoordenadas = document.getElementById('coordenadas-texto');
-            textoCoordenadas.innerText = "Buscando señal GPS... 🛰️";
+            textoCoordenadas.innerText = "Buscando señal GPS... 🛰️ (Espera)";
 
             navigator.geolocation.getCurrentPosition(
                 (position) => {
                     latitudActual = position.coords.latitude;
                     longitudActual = position.coords.longitude;
-                    textoCoordenadas.innerText = `Latitud: ${latitudActual.toFixed(6)} | Longitud: ${longitudActual.toFixed(6)}`;
+                    textoCoordenadas.innerText = `Lat: ${latitudActual.toFixed(6)} | Lon: ${longitudActual.toFixed(6)}`;
                 },
                 (error) => {
-                    textoCoordenadas.innerText = "⚠️ Error: Activa el GPS y permite la ubicación.";
+                    textoCoordenadas.innerText = "⚠️ Error: GPS desactivado o sin permiso.";
                 },
-                { enableHighAccuracy: true } // Fuerza el uso del hardware GPS del celular
+                { enableHighAccuracy: true }
             );
         });
 
-        // 4. GUARDAR DATOS Y FOTOS EN EL CELULAR
-        document.getElementById('btn-guardar').addEventListener('click', async () => {
+        // 4. CÁMARA INTEGRADA
+        const video = document.getElementById('visor-camara');
+        const canvas = document.getElementById('canvas-foto');
+        const btnEncender = document.getElementById('btn-encender-camara');
+        const btnCapturar = document.getElementById('btn-capturar-foto');
+        const galeria = document.getElementById('galeria-miniaturas');
+
+        let streamActual = null;
+        let fotosTomadasArray = []; // Guardamos las fotos aquí
+
+        btnEncender.addEventListener('click', async () => {
+            try {
+                streamActual = await navigator.mediaDevices.getUserMedia({
+                    video: { facingMode: 'environment' } // Usa la cámara trasera
+                });
+                video.srcObject = streamActual;
+                video.style.display = 'block';
+                btnCapturar.style.display = 'block';
+                btnEncender.style.display = 'none';
+            } catch (err) {
+                alert("⚠️ No se pudo acceder a la cámara. Revisa los permisos.");
+            }
+        });
+
+        btnCapturar.addEventListener('click', () => {
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            const contexto = canvas.getContext('2d');
+            contexto.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+            const fotoBase64 = canvas.toDataURL('image/jpeg', 0.8);
+            fotosTomadasArray.push(fotoBase64);
+
+            const imgMiniatura = document.createElement('img');
+            imgMiniatura.src = fotoBase64;
+            imgMiniatura.className = 'miniatura';
+            galeria.appendChild(imgMiniatura);
+        });
+
+        // 5. GUARDAR DATOS
+        document.getElementById('btn-guardar').addEventListener('click', () => {
             const titulo = document.getElementById('titulo').value;
             const descripcion = document.getElementById('descripcion').value;
-            const inputFoto = document.getElementById('input-foto');
             
             if(!latitudActual || !longitudActual) {
-                alert("Por favor, presiona el botón de 'Obtener Coordenadas GPS' primero.");
+                alert("Por favor, obtén las coordenadas GPS primero.");
                 return;
             }
             if(!titulo) {
-                alert("Por favor, ponle un título al punto.");
+                alert("Falta el título del punto.");
                 return;
-            }
-
-            // Convertir fotos a código para guardarlas en la base de datos
-            const leerFotoComoBase64 = (file) => {
-                return new Promise((resolve, reject) => {
-                    const reader = new FileReader();
-                    reader.onload = () => resolve(reader.result);
-                    reader.onerror = error => reject(error);
-                    reader.readAsDataURL(file);
-                });
-            };
-
-            let fotosArray = [];
-            for (let i = 0; i < inputFoto.files.length; i++) {
-                const base64 = await leerFotoComoBase64(inputFoto.files[i]);
-                fotosArray.push(base64);
             }
 
             const nuevoRegistro = {
@@ -136,7 +163,7 @@
                 descripcion: descripcion,
                 latitud: latitudActual,
                 longitud: longitudActual,
-                fotos: fotosArray,
+                fotos: fotosTomadasArray,
                 fecha: new Date().toISOString()
             };
 
@@ -145,19 +172,23 @@
             store.add(nuevoRegistro);
 
             transaction.oncomplete = function() {
-                alert("✅ ¡Registro de inspección guardado correctamente en tu celular!");
+                alert("✅ ¡Registro guardado en tu celular!");
                 
-                // Limpiar todo para capturar el siguiente punto en la ruta
+                // Limpiar todo para la siguiente inspección
                 document.getElementById('titulo').value = "";
                 document.getElementById('descripcion').value = "";
-                document.getElementById('input-foto').value = "";
                 latitudActual = null;
                 longitudActual = null;
                 document.getElementById('coordenadas-texto').innerText = "Latitud: --- | Longitud: ---";
-            };
-            
-            transaction.onerror = function() {
-                alert("⚠️ Error al guardar el registro.");
+                fotosTomadasArray = [];
+                galeria.innerHTML = "";
+                
+                if(streamActual) {
+                    streamActual.getTracks().forEach(track => track.stop());
+                    video.style.display = 'none';
+                    btnCapturar.style.display = 'none';
+                    btnEncender.style.display = 'block';
+                }
             };
         });
     </script>
