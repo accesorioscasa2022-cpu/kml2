@@ -1,4 +1,4 @@
-const CACHE_NAME = 'inspeccion-v11';
+const CACHE_NAME = 'inspeccion-v12';
 const urlsToCache = [
     './',
     './index.html',
@@ -7,20 +7,25 @@ const urlsToCache = [
     'https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js'
 ];
 
+// Instalación: Forzar a que se actualice inmediatamente
 self.addEventListener('install', event => {
-    event.waitUntil(
-        caches.open(CACHE_NAME)
-            .then(cache => {
-                return cache.addAll(urlsToCache);
-            })
-    );
+    self.skipWaiting();
+    event.waitUntil(caches.open(CACHE_NAME).then(cache => cache.addAll(urlsToCache)));
 });
 
+// Activación: Borrar cualquier memoria vieja al instante
+self.addEventListener('activate', event => {
+    event.waitUntil(
+        caches.keys().then(keys => Promise.all(
+            keys.map(key => key !== CACHE_NAME ? caches.delete(key) : null)
+        ))
+    );
+    self.clients.claim();
+});
+
+// Intercepción: Estrategia "Internet Primero, Caché como Respaldo"
 self.addEventListener('fetch', event => {
     event.respondWith(
-        caches.match(event.request)
-            .then(response => {
-                return response || fetch(event.request);
-            })
+        fetch(event.request).catch(() => caches.match(event.request))
     );
 });
