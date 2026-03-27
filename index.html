@@ -2,74 +2,191 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Inspección de Caminos</title>
     <link rel="manifest" href="manifest.json">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     <style>
-        body { font-family: sans-serif; padding: 20px; max-width: 600px; margin: auto; background-color: #f4f4f9;}
-        .card { background: white; padding: 20px; border-radius: 10px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); }
-        .form-group { margin-bottom: 15px; }
-        label { display: block; margin-bottom: 5px; font-weight: bold; color: #333;}
-        input[type="text"], textarea { width: 100%; padding: 10px; box-sizing: border-box; border: 1px solid #ccc; border-radius: 5px;}
-        button { width: 100%; padding: 12px; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 16px; margin-top: 10px;}
-        .btn-blue { background-color: #0056b3; }
-        .btn-success { background-color: #28a745; }
-        .btn-camara { background-color: #6c757d; }
-        .btn-orange { background-color: #fd7e14; }
-        .status { text-align: center; margin-top: 20px; padding: 10px; border-radius: 5px; background-color: #e2e3e5; color: #383d41; font-weight: bold;}
+        /* Diseño Moderno y Elegante */
+        :root {
+            --primary: #1e3a8a; /* Azul corporativo oscuro */
+            --secondary: #2563eb; /* Azul vibrante */
+            --accent: #f59e0b; /* Naranja/Ámbar para el KMZ */
+            --success: #10b981; /* Verde esmeralda */
+            --bg: #f3f4f6; /* Gris claro de fondo */
+            --surface: #ffffff; /* Blanco para tarjetas */
+            --text-main: #1f2937;
+            --text-muted: #6b7280;
+        }
+
+        body { 
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; 
+            background-color: var(--bg); 
+            color: var(--text-main); 
+            margin: 0; 
+            padding: 0;
+            padding-bottom: 40px;
+        }
+
+        /* Encabezado fijo tipo App */
+        header {
+            background-color: var(--primary);
+            color: white;
+            padding: 16px 20px;
+            text-align: center;
+            font-size: 1.2rem;
+            font-weight: 600;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .container { padding: 20px; max-width: 600px; margin: auto; }
+
+        .card { 
+            background: var(--surface); 
+            padding: 24px; 
+            border-radius: 16px; 
+            box-shadow: 0 4px 15px rgba(0,0,0,0.05); 
+            margin-bottom: 24px;
+        }
+
+        .card-title {
+            margin-top: 0;
+            font-size: 1.1rem;
+            color: var(--primary);
+            border-bottom: 2px solid #e5e7eb;
+            padding-bottom: 10px;
+            margin-bottom: 20px;
+        }
+
+        .form-group { margin-bottom: 20px; }
         
-        #visor-camara { width: 100%; border-radius: 5px; background-color: #000; display: none; margin-bottom: 10px; }
-        #galeria-miniaturas { display: flex; gap: 10px; margin-top: 10px; flex-wrap: wrap; }
-        .miniatura { width: 60px; height: 60px; object-fit: cover; border-radius: 5px; border: 2px solid #0056b3; }
+        label { 
+            display: block; 
+            margin-bottom: 8px; 
+            font-weight: 600; 
+            font-size: 0.9rem;
+            color: var(--text-muted);
+        }
+
+        input[type="text"], textarea { 
+            width: 100%; 
+            padding: 14px; 
+            box-sizing: border-box; 
+            border: 1px solid #d1d5db; 
+            border-radius: 10px;
+            font-size: 1rem;
+            background-color: #f9fafb;
+            transition: all 0.3s ease;
+        }
+        input:focus, textarea:focus {
+            outline: none;
+            border-color: var(--secondary);
+            background-color: white;
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.2);
+        }
+
+        button { 
+            width: 100%; 
+            padding: 14px; 
+            border: none; 
+            border-radius: 10px; 
+            font-size: 1rem; 
+            font-weight: 600;
+            cursor: pointer; 
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            transition: transform 0.1s ease, filter 0.2s ease;
+        }
+        button:active { transform: scale(0.97); }
+        
+        .btn-outline { background: transparent; border: 2px solid var(--secondary); color: var(--secondary); }
+        .btn-success { background-color: var(--success); color: white; box-shadow: 0 4px 6px rgba(16, 185, 129, 0.2); }
+        .btn-camara { background-color: #4b5563; color: white; }
+        .btn-csv { background-color: var(--secondary); color: white; margin-bottom: 12px;}
+        .btn-kmz { background-color: var(--accent); color: white; }
+
+        .coordenadas-box {
+            background-color: #f3f4f6;
+            padding: 12px;
+            border-radius: 8px;
+            text-align: center;
+            font-size: 0.9rem;
+            color: var(--text-muted);
+            margin-top: 10px;
+            border: 1px dashed #d1d5db;
+        }
+
+        #visor-camara { width: 100%; border-radius: 10px; background-color: #000; display: none; margin-bottom: 15px; }
+        #galeria-miniaturas { display: flex; gap: 10px; margin-top: 15px; flex-wrap: wrap; }
+        .miniatura { width: 70px; height: 70px; object-fit: cover; border-radius: 8px; border: 2px solid var(--secondary); box-shadow: 0 2px 4px rgba(0,0,0,0.1);}
+
+        .status { text-align: center; font-size: 0.85rem; color: var(--text-muted); margin-top: 20px;}
     </style>
 </head>
 <body>
 
-    <h2 style="text-align: center; color: #333;">Registro de Inspección</h2>
+    <header>
+        Inspección en Campo
+    </header>
 
-    <div class="card">
-        <div class="form-group">
-            <label for="titulo">Punto de Inspección:</label>
-            <input type="text" id="titulo" placeholder="Ej. Puente Km 45">
-        </div>
-
-        <div class="form-group">
-            <label for="descripcion">Observaciones:</label>
-            <textarea id="descripcion" rows="3" placeholder="Descripción..."></textarea>
-        </div>
-
-        <div class="form-group">
-            <button id="btn-ubicacion" class="btn-blue">📍 Obtener Coordenadas GPS</button>
-            <p id="coordenadas-texto" style="text-align: center; color: #666; font-weight: bold; margin-top: 10px;">Latitud: --- | Longitud: ---</p>
-        </div>
-
-        <div class="form-group" style="border-top: 1px solid #eee; padding-top: 15px;">
-            <video id="visor-camara" autoplay playsinline muted></video>
-            <canvas id="canvas-foto" style="display: none;"></canvas>
-            <button id="btn-encender-camara" class="btn-camara">📷 Encender Cámara</button>
-            <button id="btn-capturar-foto" style="background-color: #ffc107; color: #000; display: none;">📸 Capturar Foto</button>
-            <div id="galeria-miniaturas"></div>
-        </div>
-
-        <button id="btn-guardar" class="btn-success" style="margin-top: 20px; width: 100%;">💾 Guardar Registro</button>
-        
-        <div style="border-top: 2px dashed #ccc; margin-top: 25px; padding-top: 15px;">
-            <h3 style="text-align: center; color: #555;">Exportar Datos</h3>
+    <div class="container">
+        <div class="card">
+            <h3 class="card-title">📝 Nuevo Registro</h3>
             
-            <button id="btn-descargar-csv" style="background-color: #17a2b8; width: 100%;">📊 Descargar Excel (CSV)</button>
-            <button id="btn-compartir-kmz" class="btn-orange" style="width: 100%;">🌍 Compartir KMZ (WhatsApp/Mail)</button>
-        </div>
-    </div>
+            <div class="form-group">
+                <label for="titulo">Punto de Inspección</label>
+                <input type="text" id="titulo" placeholder="Ej. Losa Km 12+500">
+            </div>
 
-    <div class="status" id="estado-app">Conectando...</div>
+            <div class="form-group">
+                <label for="descripcion">Observaciones Detalladas</label>
+                <textarea id="descripcion" rows="3" placeholder="Describe las anomalías o estado general..."></textarea>
+            </div>
+
+            <div class="form-group">
+                <button id="btn-ubicacion" class="btn-outline">📍 Capturar Coordenadas GPS</button>
+                <div class="coordenadas-box" id="coordenadas-texto">
+                    Latitud: --- <br> Longitud: ---
+                </div>
+            </div>
+
+            <div class="form-group">
+                <video id="visor-camara" autoplay playsinline muted></video>
+                <canvas id="canvas-foto" style="display: none;"></canvas>
+                
+                <button id="btn-encender-camara" class="btn-camara">📷 Abrir Cámara</button>
+                <button id="btn-capturar-foto" style="background-color: #fbbf24; color: #000; display: none;">📸 Tomar Fotografía</button>
+                
+                <div id="galeria-miniaturas"></div>
+            </div>
+
+            <button id="btn-guardar" class="btn-success">💾 Guardar Registro en Memoria</button>
+        </div>
+
+        <div class="card">
+            <h3 class="card-title">📤 Exportar y Compartir</h3>
+            <p style="font-size: 0.85rem; color: #6b7280; margin-bottom: 15px; margin-top: -10px;">
+                Genera los archivos para tu computadora. Si tu celular bloquea WhatsApp, el archivo se descargará automáticamente.
+            </p>
+            
+            <button id="btn-descargar-csv" class="btn-csv">📊 Generar Excel (CSV)</button>
+            <button id="btn-compartir-kmz" class="btn-kmz">🌍 Generar Reporte KMZ</button>
+        </div>
+
+        <div class="status" id="estado-app">Inicializando sistema...</div>
+    </div>
 
     <script>
         // MODO OFFLINE
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
                 navigator.serviceWorker.register('sw.js').then(reg => {
-                    document.getElementById('estado-app').innerText = "✅ App lista para uso Offline";
+                    document.getElementById('estado-app').innerText = "✅ Sistema Offline Activo";
                 });
             });
         }
@@ -83,11 +200,13 @@
         // GPS
         let latitudActual = null, longitudActual = null;
         document.getElementById('btn-ubicacion').addEventListener('click', () => {
-            document.getElementById('coordenadas-texto').innerText = "Buscando... 🛰️";
+            document.getElementById('coordenadas-texto').innerHTML = "Buscando satélites... 🛰️";
             navigator.geolocation.getCurrentPosition((p) => {
                 latitudActual = p.coords.latitude; longitudActual = p.coords.longitude;
-                document.getElementById('coordenadas-texto').innerText = `Lat: ${latitudActual.toFixed(6)} | Lon: ${longitudActual.toFixed(6)}`;
-            }, () => { alert("Error GPS"); }, { enableHighAccuracy: true });
+                document.getElementById('coordenadas-texto').innerHTML = `<b>Lat:</b> ${latitudActual.toFixed(6)} <br> <b>Lon:</b> ${longitudActual.toFixed(6)}`;
+            }, () => { 
+                document.getElementById('coordenadas-texto').innerHTML = "⚠️ Error: Activa el GPS.";
+            }, { enableHighAccuracy: true });
         });
 
         // CÁMARA
@@ -97,14 +216,18 @@
         let streamActual = null, fotosArray = [];
 
         btnEncender.addEventListener('click', async () => {
-            streamActual = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
-            video.srcObject = streamActual; video.style.display = 'block'; btnCapturar.style.display = 'block'; btnEncender.style.display = 'none';
+            try {
+                streamActual = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+                video.srcObject = streamActual; video.style.display = 'block'; btnCapturar.style.display = 'flex'; btnEncender.style.display = 'none';
+            } catch (error) {
+                alert("No se pudo iniciar la cámara.");
+            }
         });
 
         btnCapturar.addEventListener('click', () => {
             canvas.width = video.videoWidth; canvas.height = video.videoHeight;
             canvas.getContext('2d').drawImage(video, 0, 0);
-            const foto = canvas.toDataURL('image/jpeg', 0.7);
+            const foto = canvas.toDataURL('image/jpeg', 0.8);
             fotosArray.push(foto);
             const img = document.createElement('img'); img.src = foto; img.className = 'miniatura'; galeria.appendChild(img);
         });
@@ -112,45 +235,93 @@
         // GUARDAR
         document.getElementById('btn-guardar').addEventListener('click', () => {
             const t = document.getElementById('titulo').value;
-            if(!latitudActual || !t) { alert("Faltan datos"); return; }
+            if(!latitudActual || !t) { alert("Faltan las coordenadas o el título del punto."); return; }
             const trans = db.transaction(["registros"], "readwrite");
             trans.objectStore("registros").add({ titulo: t, descripcion: document.getElementById('descripcion').value, latitud: latitudActual, longitud: longitudActual, fotos: fotosArray, fecha: new Date().toLocaleString() });
             trans.oncomplete = () => {
-                alert("✅ Guardado");
+                alert("✅ Registro guardado exitosamente");
                 document.getElementById('titulo').value = ""; document.getElementById('descripcion').value = "";
+                latitudActual = null; longitudActual = null;
+                document.getElementById('coordenadas-texto').innerHTML = "Latitud: --- <br> Longitud: ---";
                 fotosArray = []; galeria.innerHTML = "";
+                if(streamActual) {
+                    streamActual.getTracks().forEach(track => track.stop());
+                    video.style.display = 'none'; btnCapturar.style.display = 'none'; btnEncender.style.display = 'flex';
+                }
             };
         });
 
-        // DESCARGAR EXCEL (CSV) - Este nunca falla
+        // --- FUNCIÓN MAESTRA PARA COMPARTIR O DESCARGAR ---
+        // Esta función intenta abrir WhatsApp. Si falla, descarga el archivo para que no se pierda.
+        async function procesarArchivo(archivoFisico, nombreArchivo) {
+            // 1. Intentamos usar el menú de compartir nativo
+            if (navigator.canShare && navigator.canShare({ files: [archivoFisico] })) {
+                try {
+                    await navigator.share({
+                        files: [archivoFisico],
+                        title: 'Datos de Inspección',
+                        text: 'Adjunto los archivos generados en campo.'
+                    });
+                    return; // Si funcionó, detenemos aquí.
+                } catch (error) {
+                    console.log("El usuario canceló o el celular bloqueó el envío.");
+                    // No hacemos return, dejamos que continúe hacia la descarga.
+                }
+            }
+            
+            // 2. Si llegamos aquí, es porque Compartir falló o no está soportado.
+            // Forzamos la descarga clásica para salvar el archivo.
+            const url = URL.createObjectURL(archivoFisico);
+            const a = document.createElement("a");
+            a.href = url;
+            a.download = nombreArchivo;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            alert(`El menú de compartir fue bloqueado por tu dispositivo.\n\nEl archivo "${nombreArchivo}" se ha descargado a tu carpeta de Descargas.`);
+        }
+
+        // BOTÓN EXCEL (CSV)
         document.getElementById('btn-descargar-csv').addEventListener('click', () => {
             db.transaction("registros").objectStore("registros").getAll().onsuccess = (e) => {
                 const res = e.target.result;
-                if(res.length === 0) return alert("No hay datos");
-                let csv = "ID,Titulo,Latitud,Longitud,Fecha\n";
-                res.forEach(r => csv += `${r.id},${r.titulo},${r.latitud},${r.longitud},${r.fecha}\n`);
-                const blob = new Blob([csv], {type: 'text/csv'});
-                const url = URL.createObjectURL(blob);
-                const a = document.createElement("a"); a.href = url; a.download = "Datos.csv"; a.click();
+                if(res.length === 0) return alert("La base de datos está vacía.");
+                let csv = "ID,Titulo,Descripcion,Latitud,Longitud,Fecha,Cant_Fotos\n";
+                res.forEach(r => {
+                    const tL = r.titulo.replace(/,/g, " ").replace(/\n/g, " ");
+                    const dL = r.descripcion.replace(/,/g, " ").replace(/\n/g, " ");
+                    csv += `${r.id},${tL},${dL},${r.latitud},${r.longitud},${r.fecha},${r.fotos ? r.fotos.length : 0}\n`;
+                });
+                const archivoCSV = new File([csv], "Datos_Inspeccion.csv", { type: "text/csv" });
+                procesarArchivo(archivoCSV, "Datos_Inspeccion.csv");
             };
         });
 
-        // COMPARTIR KMZ (Mejorado)
+        // BOTÓN KMZ
         document.getElementById('btn-compartir-kmz').addEventListener('click', async () => {
+            if (typeof JSZip === 'undefined') return alert("Cargando sistema, intenta de nuevo en un segundo...");
+            
             db.transaction("registros").objectStore("registros").getAll().onsuccess = async (e) => {
                 const res = e.target.result;
-                if(res.length === 0) return alert("No hay datos");
+                if(res.length === 0) return alert("La base de datos está vacía.");
+                
+                // Mostrar alerta para avisar que está procesando
+                document.getElementById('btn-compartir-kmz').innerText = "⏳ Generando KMZ...";
                 
                 const zip = new JSZip();
                 const imgFolder = zip.folder("images");
-                let kml = `<?xml version="1.0" encoding="UTF-8"?><kml xmlns="http://www.opengis.net/kml/2.2"><Document><name>Reporte</name>`;
+                let kml = `<?xml version="1.0" encoding="UTF-8"?><kml xmlns="http://www.opengis.net/kml/2.2"><Document><name>Reporte de Campo</name>`;
 
                 res.forEach(r => {
-                    let html = `<div style="font-family:Arial;"><h3>${r.titulo}</h3><p>${r.descripcion}</p>`;
+                    let html = `<div style="font-family:Arial, sans-serif;">
+                        <h3 style="color:#1e3a8a; border-bottom:2px solid #f59e0b;">${r.titulo}</h3>
+                        <p><b>Fecha:</b> ${r.fecha}<br><b>Coordenadas:</b> ${r.latitud}, ${r.longitud}</p>
+                        <p style="background:#f3f4f6; padding:8px; border-radius:4px;">${r.descripcion}</p>`;
+                    
                     if(r.fotos) r.fotos.forEach((f, i) => {
-                        const name = `p${r.id}_${i}.jpg`;
+                        const name = `foto_${r.id}_${i}.jpg`;
                         imgFolder.file(name, f.split(',')[1], {base64: true});
-                        html += `<img src="images/${name}" width="300"><br>`;
+                        html += `<img src="images/${name}" style="width:100%; border-radius:8px; margin-top:10px;">`;
                     });
                     html += `</div>`;
                     kml += `<Placemark><name>${r.titulo}</name><description><![CDATA[${html}]]></description><Point><coordinates>${r.longitud},${r.latitud}</coordinates></Point></Placemark>`;
@@ -159,26 +330,12 @@
                 zip.file("doc.kml", kml);
 
                 const content = await zip.generateAsync({type:"blob"});
-                const fileKMZ = new File([content], "Reporte.kmz", {type: "application/vnd.google-earth.kmz"});
-
-                // PRUEBA DE FUEGO PARA COMPARTIR
-                if (navigator.share) {
-                    try {
-                        await navigator.share({
-                            files: [fileKMZ],
-                            title: 'Reporte de Inspección',
-                            text: 'Envío reporte KMZ generado desde la App.'
-                        });
-                    } catch (err) {
-                        // Si falla el compartir, hacemos descarga automática
-                        const url = URL.createObjectURL(fileKMZ);
-                        const a = document.createElement("a"); a.href = url; a.download = "Reporte.kmz"; a.click();
-                        alert("El celular bloqueó el menú de compartir, pero el archivo se descargó en tu carpeta de Descargas.");
-                    }
-                } else {
-                    const url = URL.createObjectURL(fileKMZ);
-                    const a = document.createElement("a"); a.href = url; a.download = "Reporte.kmz"; a.click();
-                }
+                const archivoKMZ = new File([content], "Reporte_Campo.kmz", {type: "application/vnd.google-earth.kmz"});
+                
+                // Restaurar botón
+                document.getElementById('btn-compartir-kmz').innerHTML = "🌍 Generar Reporte KMZ";
+                
+                procesarArchivo(archivoKMZ, "Reporte_Campo.kmz");
             };
         });
     </script>
