@@ -297,7 +297,7 @@
             };
         });
 
-        // BOTÓN KMZ
+        // BOTÓN KMZ (Descarga 100% Segura y Directa)
         document.getElementById('btn-compartir-kmz').addEventListener('click', async () => {
             if (typeof JSZip === 'undefined') return alert("Cargando sistema, intenta de nuevo en un segundo...");
             
@@ -305,8 +305,8 @@
                 const res = e.target.result;
                 if(res.length === 0) return alert("La base de datos está vacía.");
                 
-                // Mostrar alerta para avisar que está procesando
-                document.getElementById('btn-compartir-kmz').innerText = "⏳ Generando KMZ...";
+                // Mostrar alerta para avisar que está trabajando
+                document.getElementById('btn-compartir-kmz').innerText = "⏳ Empaquetando fotos...";
                 
                 const zip = new JSZip();
                 const imgFolder = zip.folder("images");
@@ -330,12 +330,19 @@
                 zip.file("doc.kml", kml);
 
                 const content = await zip.generateAsync({type:"blob"});
-                const archivoKMZ = new File([content], "Reporte_Campo.kmz", {type: "application/vnd.google-earth.kmz"});
                 
-                // Restaurar botón
-                document.getElementById('btn-compartir-kmz').innerHTML = "🌍 Generar Reporte KMZ";
+                // FORZAR DESCARGA AL CELULAR (Sin pasar por el menú de compartir)
+                const url = URL.createObjectURL(content);
+                const a = document.createElement("a");
+                a.href = url;
+                a.download = "Reporte_Campo.kmz";
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
                 
-                procesarArchivo(archivoKMZ, "Reporte_Campo.kmz");
+                // Restaurar botón y avisar al usuario
+                document.getElementById('btn-compartir-kmz').innerHTML = "🌍 Descargar Reporte KMZ";
+                alert("✅ Archivo guardado en tus Descargas.\n\nPara enviarlo, abre WhatsApp, toca el clip 📎, elige 'Documento' y selecciona tu archivo.");
             };
         });
     </script>
