@@ -7,343 +7,175 @@
     <link rel="manifest" href="manifest.json">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     <style>
-        /* Diseño Moderno y Elegante */
-        :root {
-            --primary: #1e3a8a; /* Azul corporativo oscuro */
-            --secondary: #2563eb; /* Azul vibrante */
-            --accent: #f59e0b; /* Naranja/Ámbar para el KMZ */
-            --success: #10b981; /* Verde esmeralda */
-            --bg: #f3f4f6; /* Gris claro de fondo */
-            --surface: #ffffff; /* Blanco para tarjetas */
-            --text-main: #1f2937;
-            --text-muted: #6b7280;
-        }
-
-        body { 
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; 
-            background-color: var(--bg); 
-            color: var(--text-main); 
-            margin: 0; 
-            padding: 0;
-            padding-bottom: 40px;
-        }
-
-        /* Encabezado fijo tipo App */
-        header {
-            background-color: var(--primary);
-            color: white;
-            padding: 16px 20px;
-            text-align: center;
-            font-size: 1.2rem;
-            font-weight: 600;
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-            position: sticky;
-            top: 0;
-            z-index: 100;
-        }
-
+        :root { --primary: #1e3a8a; --secondary: #2563eb; --accent: #f59e0b; --success: #10b981; --bg: #f3f4f6; --surface: #ffffff; --text-main: #1f2937; --text-muted: #6b7280; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background-color: var(--bg); color: var(--text-main); margin: 0; padding: 0; padding-bottom: 40px; }
+        header { background-color: var(--primary); color: white; padding: 16px 20px; text-align: center; font-size: 1.2rem; font-weight: 600; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); position: sticky; top: 0; z-index: 100; }
         .container { padding: 20px; max-width: 600px; margin: auto; }
-
-        .card { 
-            background: var(--surface); 
-            padding: 24px; 
-            border-radius: 16px; 
-            box-shadow: 0 4px 15px rgba(0,0,0,0.05); 
-            margin-bottom: 24px;
-        }
-
-        .card-title {
-            margin-top: 0;
-            font-size: 1.1rem;
-            color: var(--primary);
-            border-bottom: 2px solid #e5e7eb;
-            padding-bottom: 10px;
-            margin-bottom: 20px;
-        }
-
+        .card { background: var(--surface); padding: 24px; border-radius: 16px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); margin-bottom: 24px; }
+        .card-title { margin-top: 0; font-size: 1.1rem; color: var(--primary); border-bottom: 2px solid #e5e7eb; padding-bottom: 10px; margin-bottom: 20px; }
         .form-group { margin-bottom: 20px; }
-        
-        label { 
-            display: block; 
-            margin-bottom: 8px; 
-            font-weight: 600; 
-            font-size: 0.9rem;
-            color: var(--text-muted);
-        }
-
-        input[type="text"], textarea { 
-            width: 100%; 
-            padding: 14px; 
-            box-sizing: border-box; 
-            border: 1px solid #d1d5db; 
-            border-radius: 10px;
-            font-size: 1rem;
-            background-color: #f9fafb;
-            transition: all 0.3s ease;
-        }
-        input:focus, textarea:focus {
-            outline: none;
-            border-color: var(--secondary);
-            background-color: white;
-            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.2);
-        }
-
-        button { 
-            width: 100%; 
-            padding: 14px; 
-            border: none; 
-            border-radius: 10px; 
-            font-size: 1rem; 
-            font-weight: 600;
-            cursor: pointer; 
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 8px;
-            transition: transform 0.1s ease, filter 0.2s ease;
-        }
+        label { display: block; margin-bottom: 8px; font-weight: 600; font-size: 0.9rem; color: var(--text-muted); }
+        input[type="text"], textarea { width: 100%; padding: 14px; box-sizing: border-box; border: 1px solid #d1d5db; border-radius: 10px; font-size: 1rem; background-color: #f9fafb; transition: all 0.3s ease; }
+        input:focus, textarea:focus { outline: none; border-color: var(--secondary); background-color: white; box-shadow: 0 0 0 3px rgba(37,99,235,0.2); }
+        button { width: 100%; padding: 14px; border: none; border-radius: 10px; font-size: 1rem; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; }
         button:active { transform: scale(0.97); }
-        
         .btn-outline { background: transparent; border: 2px solid var(--secondary); color: var(--secondary); }
-        .btn-success { background-color: var(--success); color: white; box-shadow: 0 4px 6px rgba(16, 185, 129, 0.2); }
+        .btn-success { background-color: var(--success); color: white; }
         .btn-camara { background-color: #4b5563; color: white; }
         .btn-csv { background-color: var(--secondary); color: white; margin-bottom: 12px;}
         .btn-kmz { background-color: var(--accent); color: white; }
-
-        .coordenadas-box {
-            background-color: #f3f4f6;
-            padding: 12px;
-            border-radius: 8px;
-            text-align: center;
-            font-size: 0.9rem;
-            color: var(--text-muted);
-            margin-top: 10px;
-            border: 1px dashed #d1d5db;
-        }
-
+        .btn-reset { background-color: transparent; border: 1px solid #ef4444; color: #ef4444; margin-top: 20px; font-size: 0.85rem; }
+        .coordenadas-box { background-color: #f3f4f6; padding: 12px; border-radius: 8px; text-align: center; font-size: 0.9rem; color: var(--text-muted); margin-top: 10px; border: 1px dashed #d1d5db; }
         #visor-camara { width: 100%; border-radius: 10px; background-color: #000; display: none; margin-bottom: 15px; }
         #galeria-miniaturas { display: flex; gap: 10px; margin-top: 15px; flex-wrap: wrap; }
-        .miniatura { width: 70px; height: 70px; object-fit: cover; border-radius: 8px; border: 2px solid var(--secondary); box-shadow: 0 2px 4px rgba(0,0,0,0.1);}
-
+        .miniatura { width: 70px; height: 70px; object-fit: cover; border-radius: 8px; border: 2px solid var(--secondary); }
         .status { text-align: center; font-size: 0.85rem; color: var(--text-muted); margin-top: 20px;}
     </style>
 </head>
 <body>
-
-    <header>
-        Inspección en Campo
-    </header>
-
+    <header>Inspección en Campo</header>
     <div class="container">
         <div class="card">
             <h3 class="card-title">📝 Nuevo Registro</h3>
-            
             <div class="form-group">
                 <label for="titulo">Punto de Inspección</label>
                 <input type="text" id="titulo" placeholder="Ej. Losa Km 12+500">
             </div>
-
             <div class="form-group">
-                <label for="descripcion">Observaciones Detalladas</label>
-                <textarea id="descripcion" rows="3" placeholder="Describe las anomalías o estado general..."></textarea>
+                <label for="descripcion">Observaciones Generales</label>
+                <textarea id="descripcion" rows="3" placeholder="Describe el estado general..."></textarea>
             </div>
-
             <div class="form-group">
                 <button id="btn-ubicacion" class="btn-outline">📍 Capturar Coordenadas GPS</button>
-                <div class="coordenadas-box" id="coordenadas-texto">
-                    Latitud: --- <br> Longitud: ---
-                </div>
+                <div class="coordenadas-box" id="coordenadas-texto">Latitud: --- <br> Longitud: ---</div>
             </div>
-
             <div class="form-group">
                 <video id="visor-camara" autoplay playsinline muted></video>
                 <canvas id="canvas-foto" style="display: none;"></canvas>
-                
                 <button id="btn-encender-camara" class="btn-camara">📷 Abrir Cámara</button>
-                <button id="btn-capturar-foto" style="background-color: #fbbf24; color: #000; display: none;">📸 Tomar Fotografía</button>
-                
+                <button id="btn-capturar-foto" style="background-color: #fbbf24; color: #000; display: none;">📸 Capturar Foto (y añadir pie)</button>
                 <div id="galeria-miniaturas"></div>
             </div>
-
-            <button id="btn-guardar" class="btn-success">💾 Guardar Registro en Memoria</button>
+            <button id="btn-guardar" class="btn-success">💾 Guardar Registro</button>
         </div>
 
         <div class="card">
             <h3 class="card-title">📤 Exportar y Compartir</h3>
-            <p style="font-size: 0.85rem; color: #6b7280; margin-bottom: 15px; margin-top: -10px;">
-                Genera los archivos para tu computadora. Si tu celular bloquea WhatsApp, el archivo se descargará automáticamente.
-            </p>
-            
             <button id="btn-descargar-csv" class="btn-csv">📊 Descargar Excel (CSV)</button>
-            <button id="btn-compartir-kmz" class="btn-kmz">🌍 Descargar Reporte KMZ</button>
+            <button id="btn-compartir-kmz" class="btn-kmz">🌍 Compartir Reporte KMZ</button>
         </div>
 
+        <button id="btn-reset" class="btn-reset">🔄 Solucionar problemas de Cámara/WhatsApp</button>
         <div class="status" id="estado-app">Inicializando sistema...</div>
     </div>
 
     <script>
-        // MODO OFFLINE
-        if ('serviceWorker' in navigator) {
-            window.addEventListener('load', () => {
-                navigator.serviceWorker.register('sw.js').then(reg => {
-                    document.getElementById('estado-app').innerText = "✅ Sistema Offline Activo";
-                });
-            });
-        }
+        if ('serviceWorker' in navigator) { window.addEventListener('load', () => { navigator.serviceWorker.register('sw.js').then(reg => { document.getElementById('estado-app').innerText = "✅ Sistema Offline Activo"; }); }); }
 
-        // BASE DE DATOS
-        let db;
-        const request = indexedDB.open("InspeccionDB", 1);
+        let db; const request = indexedDB.open("InspeccionDB", 1);
         request.onupgradeneeded = (e) => { e.target.result.createObjectStore("registros", { keyPath: "id", autoIncrement:true }); };
         request.onsuccess = (e) => { db = e.target.result; };
 
-        // GPS
         let latitudActual = null, longitudActual = null;
         document.getElementById('btn-ubicacion').addEventListener('click', () => {
-            document.getElementById('coordenadas-texto').innerHTML = "Buscando satélites... 🛰️";
-            navigator.geolocation.getCurrentPosition((p) => {
-                latitudActual = p.coords.latitude; longitudActual = p.coords.longitude;
-                document.getElementById('coordenadas-texto').innerHTML = `<b>Lat:</b> ${latitudActual.toFixed(6)} <br> <b>Lon:</b> ${longitudActual.toFixed(6)}`;
-            }, () => { 
-                document.getElementById('coordenadas-texto').innerHTML = "⚠️ Error: Activa el GPS.";
-            }, { enableHighAccuracy: true });
+            document.getElementById('coordenadas-texto').innerHTML = "Buscando... 🛰️";
+            navigator.geolocation.getCurrentPosition((p) => { latitudActual = p.coords.latitude; longitudActual = p.coords.longitude; document.getElementById('coordenadas-texto').innerHTML = `<b>Lat:</b> ${latitudActual.toFixed(6)} <br> <b>Lon:</b> ${longitudActual.toFixed(6)}`; }, () => { document.getElementById('coordenadas-texto').innerHTML = "⚠️ Error GPS."; }, { enableHighAccuracy: true });
         });
 
-        // CÁMARA
-        const video = document.getElementById('visor-camara'), canvas = document.getElementById('canvas-foto'),
-              btnEncender = document.getElementById('btn-encender-camara'), btnCapturar = document.getElementById('btn-capturar-foto'),
-              galeria = document.getElementById('galeria-miniaturas');
+        const video = document.getElementById('visor-camara'), canvas = document.getElementById('canvas-foto'), btnEncender = document.getElementById('btn-encender-camara'), btnCapturar = document.getElementById('btn-capturar-foto'), galeria = document.getElementById('galeria-miniaturas');
         let streamActual = null, fotosArray = [];
 
         btnEncender.addEventListener('click', async () => {
-            try {
-                streamActual = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
-                video.srcObject = streamActual; video.style.display = 'block'; btnCapturar.style.display = 'flex'; btnEncender.style.display = 'none';
-            } catch (error) {
-                alert("No se pudo iniciar la cámara.");
-            }
+            try { streamActual = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } }); video.srcObject = streamActual; video.style.display = 'block'; btnCapturar.style.display = 'flex'; btnEncender.style.display = 'none'; } catch (error) { alert("Error cámara"); }
         });
 
+        // NUEVO: CAPTURA CON PIE DE FOTO
         btnCapturar.addEventListener('click', () => {
             canvas.width = video.videoWidth; canvas.height = video.videoHeight;
             canvas.getContext('2d').drawImage(video, 0, 0);
-            const foto = canvas.toDataURL('image/jpeg', 0.8);
-            fotosArray.push(foto);
-            const img = document.createElement('img'); img.src = foto; img.className = 'miniatura'; galeria.appendChild(img);
+            const fotoBase64 = canvas.toDataURL('image/jpeg', 0.8);
+            
+            // Pedir el pie de foto al usuario
+            let pieDeFoto = prompt("Escribe un pie de foto o descripción para esta imagen específica:", "Ej: Grieta en el lado derecho");
+            if (pieDeFoto === null || pieDeFoto.trim() === "") { pieDeFoto = "Sin pie de foto"; }
+            
+            // Guardar tanto la foto como su texto
+            fotosArray.push({ base64: fotoBase64, descripcion: pieDeFoto });
+            
+            // Mostrar la miniatura en pantalla con su textito abajo
+            const divContenedor = document.createElement('div');
+            divContenedor.style = "text-align: center; width: 75px;";
+            const img = document.createElement('img'); img.src = fotoBase64; img.className = 'miniatura';
+            const txt = document.createElement('div'); txt.innerText = pieDeFoto; txt.style = "font-size: 10px; color: #666; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;";
+            divContenedor.appendChild(img); divContenedor.appendChild(txt); galeria.appendChild(divContenedor);
         });
 
-        // GUARDAR
         document.getElementById('btn-guardar').addEventListener('click', () => {
             const t = document.getElementById('titulo').value;
-            if(!latitudActual || !t) { alert("Faltan las coordenadas o el título del punto."); return; }
+            if(!latitudActual || !t) { alert("Faltan coordenadas o título."); return; }
             const trans = db.transaction(["registros"], "readwrite");
             trans.objectStore("registros").add({ titulo: t, descripcion: document.getElementById('descripcion').value, latitud: latitudActual, longitud: longitudActual, fotos: fotosArray, fecha: new Date().toLocaleString() });
             trans.oncomplete = () => {
-                alert("✅ Registro guardado exitosamente");
-                document.getElementById('titulo').value = ""; document.getElementById('descripcion').value = "";
-                latitudActual = null; longitudActual = null;
-                document.getElementById('coordenadas-texto').innerHTML = "Latitud: --- <br> Longitud: ---";
-                fotosArray = []; galeria.innerHTML = "";
-                if(streamActual) {
-                    streamActual.getTracks().forEach(track => track.stop());
-                    video.style.display = 'none'; btnCapturar.style.display = 'none'; btnEncender.style.display = 'flex';
-                }
+                alert("✅ Guardado"); document.getElementById('titulo').value = ""; document.getElementById('descripcion').value = ""; latitudActual = null; longitudActual = null; document.getElementById('coordenadas-texto').innerHTML = "Latitud: --- <br> Longitud: ---"; fotosArray = []; galeria.innerHTML = "";
+                if(streamActual) { streamActual.getTracks().forEach(track => track.stop()); video.style.display = 'none'; btnCapturar.style.display = 'none'; btnEncender.style.display = 'flex'; }
             };
         });
 
-        // --- FUNCIÓN MAESTRA PARA COMPARTIR O DESCARGAR ---
-        // Esta función intenta abrir WhatsApp. Si falla, descarga el archivo para que no se pierda.
         async function procesarArchivo(archivoFisico, nombreArchivo) {
-            // 1. Intentamos usar el menú de compartir nativo
             if (navigator.canShare && navigator.canShare({ files: [archivoFisico] })) {
-                try {
-                    await navigator.share({
-                        files: [archivoFisico],
-                        title: 'Datos de Inspección',
-                        text: 'Adjunto los archivos generados en campo.'
-                    });
-                    return; // Si funcionó, detenemos aquí.
-                } catch (error) {
-                    console.log("El usuario canceló o el celular bloqueó el envío.");
-                    // No hacemos return, dejamos que continúe hacia la descarga.
-                }
+                try { await navigator.share({ files: [archivoFisico], title: 'Reporte', text: 'Adjunto reporte de campo.' }); return; } catch (e) {}
             }
-            
-            // 2. Si llegamos aquí, es porque Compartir falló o no está soportado.
-            // Forzamos la descarga clásica para salvar el archivo.
-            const url = URL.createObjectURL(archivoFisico);
-            const a = document.createElement("a");
-            a.href = url;
-            a.download = nombreArchivo;
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            alert(`El menú de compartir fue bloqueado por tu dispositivo.\n\nEl archivo "${nombreArchivo}" se ha descargado a tu carpeta de Descargas.`);
+            const url = URL.createObjectURL(archivoFisico); const a = document.createElement("a"); a.href = url; a.download = nombreArchivo; document.body.appendChild(a); a.click(); document.body.removeChild(a);
         }
 
-        // BOTÓN EXCEL (CSV)
         document.getElementById('btn-descargar-csv').addEventListener('click', () => {
-            db.transaction("registros").objectStore("registros").getAll().onsuccess = (e) => {
-                const res = e.target.result;
-                if(res.length === 0) return alert("La base de datos está vacía.");
-                let csv = "ID,Titulo,Descripcion,Latitud,Longitud,Fecha,Cant_Fotos\n";
-                res.forEach(r => {
-                    const tL = r.titulo.replace(/,/g, " ").replace(/\n/g, " ");
-                    const dL = r.descripcion.replace(/,/g, " ").replace(/\n/g, " ");
-                    csv += `${r.id},${tL},${dL},${r.latitud},${r.longitud},${r.fecha},${r.fotos ? r.fotos.length : 0}\n`;
-                });
-                const archivoCSV = new File([csv], "Datos_Inspeccion.csv", { type: "text/csv" });
-                procesarArchivo(archivoCSV, "Datos_Inspeccion.csv");
+            db.transaction("registros").objectStore("registros").getAll().onsuppress = (e) => {
+                const res = e.target.result; if(res.length === 0) return alert("Base vacía.");
+                let csv = "ID,Titulo,Descripcion,Latitud,Longitud,Fecha\n";
+                res.forEach(r => { csv += `${r.id},${r.titulo.replace(/,/g," ")},${r.descripcion.replace(/,/g," ")},${r.latitud},${r.longitud},${r.fecha}\n`; });
+                procesarArchivo(new File([csv], "Datos.csv", { type: "text/csv" }), "Datos.csv");
             };
         });
 
-        // BOTÓN KMZ (Descarga 100% Segura y Directa)
         document.getElementById('btn-compartir-kmz').addEventListener('click', async () => {
-            if (typeof JSZip === 'undefined') return alert("Cargando sistema, intenta de nuevo en un segundo...");
-            
+            if (typeof JSZip === 'undefined') return alert("Cargando...");
             db.transaction("registros").objectStore("registros").getAll().onsuccess = async (e) => {
-                const res = e.target.result;
-                if(res.length === 0) return alert("La base de datos está vacía.");
-                
-                // Mostrar alerta para avisar que está trabajando
-                document.getElementById('btn-compartir-kmz').innerText = "⏳ Empaquetando fotos...";
-                
-                const zip = new JSZip();
-                const imgFolder = zip.folder("images");
-                let kml = `<?xml version="1.0" encoding="UTF-8"?><kml xmlns="http://www.opengis.net/kml/2.2"><Document><name>Reporte de Campo</name>`;
+                const res = e.target.result; if(res.length === 0) return alert("Base vacía.");
+                document.getElementById('btn-compartir-kmz').innerText = "⏳ Generando...";
+                const zip = new JSZip(); const imgFolder = zip.folder("images");
+                let kml = `<?xml version="1.0" encoding="UTF-8"?><kml xmlns="http://www.opengis.net/kml/2.2"><Document><name>Reporte</name>`;
 
                 res.forEach(r => {
-                    let html = `<div style="font-family:Arial, sans-serif;">
-                        <h3 style="color:#1e3a8a; border-bottom:2px solid #f59e0b;">${r.titulo}</h3>
-                        <p><b>Fecha:</b> ${r.fecha}<br><b>Coordenadas:</b> ${r.latitud}, ${r.longitud}</p>
-                        <p style="background:#f3f4f6; padding:8px; border-radius:4px;">${r.descripcion}</p>`;
+                    let html = `<div style="font-family:Arial, sans-serif;"><h3 style="color:#1e3a8a; border-bottom:2px solid #f59e0b;">${r.titulo}</h3><p><b>Fecha:</b> ${r.fecha}<br><b>Coordenadas:</b> ${r.latitud}, ${r.longitud}</p><p style="background:#f3f4f6; padding:8px;">${r.descripcion}</p>`;
                     
+                    // NUEVO: INSERTAR CADA FOTO CON SU PIE DE FOTO EN EL MACHOTE
                     if(r.fotos) r.fotos.forEach((f, i) => {
                         const name = `foto_${r.id}_${i}.jpg`;
-                        imgFolder.file(name, f.split(',')[1], {base64: true});
-                        html += `<img src="images/${name}" style="width:100%; border-radius:8px; margin-top:10px;">`;
+                        imgFolder.file(name, f.base64.split(',')[1], {base64: true});
+                        html += `<div style="margin-top:15px; background:#fff; padding:10px; border-radius:8px; border: 1px solid #ccc; text-align:center;">
+                                    <img src="images/${name}" style="width:100%; border-radius:4px;">
+                                    <p style="margin: 8px 0 0 0; font-size: 14px; color: #444;"><i>📸 ${f.descripcion}</i></p>
+                                 </div>`;
                     });
                     html += `</div>`;
                     kml += `<Placemark><name>${r.titulo}</name><description><![CDATA[${html}]]></description><Point><coordinates>${r.longitud},${r.latitud}</coordinates></Point></Placemark>`;
                 });
-                kml += `</Document></kml>`;
-                zip.file("doc.kml", kml);
-
+                kml += `</Document></kml>`; zip.file("doc.kml", kml);
                 const content = await zip.generateAsync({type:"blob"});
-                
-                // FORZAR DESCARGA AL CELULAR (Sin pasar por el menú de compartir)
-                const url = URL.createObjectURL(content);
-                const a = document.createElement("a");
-                a.href = url;
-                a.download = "Reporte_Campo.kmz";
-                document.body.appendChild(a);
-                a.click();
-                document.body.removeChild(a);
-                
-                // Restaurar botón y avisar al usuario
-                document.getElementById('btn-compartir-kmz').innerHTML = "🌍 Descargar Reporte KMZ";
-                alert("✅ Archivo guardado en tus Descargas.\n\nPara enviarlo, abre WhatsApp, toca el clip 📎, elige 'Documento' y selecciona tu archivo.");
+                document.getElementById('btn-compartir-kmz').innerHTML = "🌍 Compartir Reporte KMZ";
+                procesarArchivo(new File([content], "Reporte_Campo.kmz", {type: "application/vnd.google-earth.kmz"}), "Reporte_Campo.kmz");
             };
+        });
+
+        // BOTÓN DE AUTOLIMPIEZA (Para arreglar la cámara oscura y el WhatsApp)
+        document.getElementById('btn-reset').addEventListener('click', () => {
+            if ('serviceWorker' in navigator) {
+                navigator.serviceWorker.getRegistrations().then(function(registrations) {
+                    for(let registration of registrations) { registration.unregister(); }
+                    alert("🧹 Memoria del navegador limpiada exitosamente.\n\nLa aplicación se va a recargar ahora. ¡Tu cámara y exportaciones ya deben funcionar bien en modo normal!");
+                    window.location.reload(true);
+                });
+            }
         });
     </script>
 </body>
