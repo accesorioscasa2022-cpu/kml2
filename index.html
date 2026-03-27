@@ -24,6 +24,7 @@
         .btn-camara { background-color: #4b5563; color: white; }
         .btn-csv { background-color: var(--secondary); color: white; }
         .btn-kmz { background-color: var(--accent); color: white; }
+        .btn-reset { background-color: transparent; border: 1px solid #ef4444; color: #ef4444; margin-top: 20px; font-size: 0.85rem; }
         .btn-descarga-lista { background-color: #10b981; color: white; display: block; text-align: center; text-decoration: none; padding: 14px; border-radius: 10px; font-weight: bold; animation: latido 1.5s infinite; }
         @keyframes latido { 0% { transform: scale(1); } 50% { transform: scale(1.02); } 100% { transform: scale(1); } }
         .coordenadas-box { background-color: #f3f4f6; padding: 12px; border-radius: 8px; text-align: center; font-size: 0.9rem; color: var(--text-muted); margin-top: 10px; border: 1px dashed #d1d5db; }
@@ -61,9 +62,9 @@
         </div>
 
         <div class="card">
-            <h3 class="card-title">📤 Exportar Datos (Anti-Bloqueo)</h3>
+            <h3 class="card-title">📤 Exportar Datos</h3>
             <p style="font-size: 0.85rem; color: #6b7280; margin-bottom: 15px; margin-top: -10px;">
-                Paso 1: Prepara el archivo.<br>Paso 2: Descárgalo a tu celular y envíalo por WhatsApp o Telegram como "Documento".
+                Toca "Preparar". Cuando se ponga verde, tócalo de nuevo para descargarlo. Luego envíalo desde tu WhatsApp como Documento.
             </p>
             
             <div id="contenedor-csv" style="margin-bottom: 15px;">
@@ -75,6 +76,8 @@
             </div>
         </div>
 
+        <button id="btn-reset" class="btn-reset">🔄 Solucionar problemas de Cámara (Limpiar Memoria)</button>
+        
         <div class="status" id="estado-app">Inicializando sistema...</div>
     </div>
 
@@ -123,14 +126,12 @@
                 alert("✅ Guardado en memoria"); document.getElementById('titulo').value = ""; document.getElementById('descripcion').value = ""; latitudActual = null; longitudActual = null; document.getElementById('coordenadas-texto').innerHTML = "Latitud: --- <br> Longitud: ---"; fotosArray = []; galeria.innerHTML = "";
                 if(streamActual) { streamActual.getTracks().forEach(track => track.stop()); video.style.display = 'none'; btnCapturar.style.display = 'none'; btnEncender.style.display = 'flex'; }
                 
-                // Reiniciar los botones de exportación si se guardó algo nuevo
                 document.getElementById('contenedor-csv').innerHTML = '<button id="btn-preparar-csv" class="btn-csv">📊 1. Preparar Excel (CSV)</button>';
                 document.getElementById('contenedor-kmz').innerHTML = '<button id="btn-preparar-kmz" class="btn-kmz">🌍 2. Preparar Reporte KMZ</button>';
-                vincularBotones(); // Volver a activar las funciones
+                vincularBotones();
             };
         });
 
-        // SISTEMA DE EXPORTACIÓN EN DOS PASOS (ANTI-BLOQUEOS)
         function vincularBotones() {
             const btnCsv = document.getElementById('btn-preparar-csv');
             if(btnCsv) {
@@ -140,10 +141,9 @@
                         let csv = "ID,Titulo,Descripcion,Latitud,Longitud,Fecha\n";
                         res.forEach(r => { csv += `${r.id},${r.titulo.replace(/,/g," ")},${r.descripcion.replace(/,/g," ")},${r.latitud},${r.longitud},${r.fecha}\n`; });
                         
-                        // En lugar de forzar descarga, creamos un enlace nativo real
                         const archivo = new Blob([csv], { type: "text/csv" });
                         const url = URL.createObjectURL(archivo);
-                        document.getElementById('contenedor-csv').innerHTML = `<a href="${url}" download="Datos_Inspeccion.csv" class="btn-descarga-lista">✅ ¡Listo! Toca aquí para Guardar Excel</a>`;
+                        document.getElementById('contenedor-csv').innerHTML = `<a href="${url}" download="Datos_Inspeccion.csv" class="btn-descarga-lista">✅ 1. Toca aquí para Descargar Excel</a>`;
                     };
                 });
             }
@@ -175,14 +175,24 @@
                         
                         const content = await zip.generateAsync({type:"blob"});
                         
-                        // Crear el enlace nativo
                         const url = URL.createObjectURL(content);
-                        document.getElementById('contenedor-kmz').innerHTML = `<a href="${url}" download="Reporte_Campo.kmz" class="btn-descarga-lista">✅ ¡Listo! Toca aquí para Guardar KMZ</a>`;
+                        document.getElementById('contenedor-kmz').innerHTML = `<a href="${url}" download="Reporte_Campo.kmz" class="btn-descarga-lista">✅ 2. Toca aquí para Descargar KMZ</a>`;
                     };
                 });
             }
         }
-        vincularBotones(); // Activar botones al cargar la página
+        vincularBotones();
+
+        // FUNCIÓN DEL BOTÓN LIMPIADOR
+        document.getElementById('btn-reset').addEventListener('click', () => {
+            if ('serviceWorker' in navigator) {
+                navigator.serviceWorker.getRegistrations().then(function(registrations) {
+                    for(let registration of registrations) { registration.unregister(); }
+                    alert("🧹 Memoria limpiada exitosamente.\n\nLa aplicación se recargará para arreglar la cámara.");
+                    window.location.reload(true);
+                });
+            }
+        });
     </script>
 </body>
 </html>
