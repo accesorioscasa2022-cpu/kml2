@@ -1,4 +1,4 @@
-const CACHE_NAME = 'inspeccion-v8';
+const CACHE_NAME = 'inspeccion-v9';
 const urlsToCache = [
     './',
     './index.html',
