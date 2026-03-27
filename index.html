@@ -22,9 +22,10 @@
         .btn-outline { background: transparent; border: 2px solid var(--secondary); color: var(--secondary); }
         .btn-success { background-color: var(--success); color: white; }
         .btn-camara { background-color: #4b5563; color: white; }
-        .btn-csv { background-color: var(--secondary); color: white; margin-bottom: 12px;}
+        .btn-csv { background-color: var(--secondary); color: white; }
         .btn-kmz { background-color: var(--accent); color: white; }
-        .btn-reset { background-color: transparent; border: 1px solid #ef4444; color: #ef4444; margin-top: 20px; font-size: 0.85rem; }
+        .btn-descarga-lista { background-color: #10b981; color: white; display: block; text-align: center; text-decoration: none; padding: 14px; border-radius: 10px; font-weight: bold; animation: latido 1.5s infinite; }
+        @keyframes latido { 0% { transform: scale(1); } 50% { transform: scale(1.02); } 100% { transform: scale(1); } }
         .coordenadas-box { background-color: #f3f4f6; padding: 12px; border-radius: 8px; text-align: center; font-size: 0.9rem; color: var(--text-muted); margin-top: 10px; border: 1px dashed #d1d5db; }
         #visor-camara { width: 100%; border-radius: 10px; background-color: #000; display: none; margin-bottom: 15px; }
         #galeria-miniaturas { display: flex; gap: 10px; margin-top: 15px; flex-wrap: wrap; }
@@ -60,12 +61,20 @@
         </div>
 
         <div class="card">
-            <h3 class="card-title">📤 Exportar y Compartir</h3>
-            <button id="btn-descargar-csv" class="btn-csv">📊 Descargar Excel (CSV)</button>
-            <button id="btn-compartir-kmz" class="btn-kmz">🌍 Compartir Reporte KMZ</button>
+            <h3 class="card-title">📤 Exportar Datos (Anti-Bloqueo)</h3>
+            <p style="font-size: 0.85rem; color: #6b7280; margin-bottom: 15px; margin-top: -10px;">
+                Paso 1: Prepara el archivo.<br>Paso 2: Descárgalo a tu celular y envíalo por WhatsApp o Telegram como "Documento".
+            </p>
+            
+            <div id="contenedor-csv" style="margin-bottom: 15px;">
+                <button id="btn-preparar-csv" class="btn-csv">📊 1. Preparar Excel (CSV)</button>
+            </div>
+            
+            <div id="contenedor-kmz">
+                <button id="btn-preparar-kmz" class="btn-kmz">🌍 2. Preparar Reporte KMZ</button>
+            </div>
         </div>
 
-        <button id="btn-reset" class="btn-reset">🔄 Solucionar problemas de Cámara/WhatsApp</button>
         <div class="status" id="estado-app">Inicializando sistema...</div>
     </div>
 
@@ -89,22 +98,17 @@
             try { streamActual = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } }); video.srcObject = streamActual; video.style.display = 'block'; btnCapturar.style.display = 'flex'; btnEncender.style.display = 'none'; } catch (error) { alert("Error cámara"); }
         });
 
-        // NUEVO: CAPTURA CON PIE DE FOTO
         btnCapturar.addEventListener('click', () => {
             canvas.width = video.videoWidth; canvas.height = video.videoHeight;
             canvas.getContext('2d').drawImage(video, 0, 0);
             const fotoBase64 = canvas.toDataURL('image/jpeg', 0.8);
             
-            // Pedir el pie de foto al usuario
-            let pieDeFoto = prompt("Escribe un pie de foto o descripción para esta imagen específica:", "Ej: Grieta en el lado derecho");
+            let pieDeFoto = prompt("Escribe un pie de foto para esta imagen:", "Ej: Grieta profunda");
             if (pieDeFoto === null || pieDeFoto.trim() === "") { pieDeFoto = "Sin pie de foto"; }
             
-            // Guardar tanto la foto como su texto
             fotosArray.push({ base64: fotoBase64, descripcion: pieDeFoto });
             
-            // Mostrar la miniatura en pantalla con su textito abajo
-            const divContenedor = document.createElement('div');
-            divContenedor.style = "text-align: center; width: 75px;";
+            const divContenedor = document.createElement('div'); divContenedor.style = "text-align: center; width: 75px;";
             const img = document.createElement('img'); img.src = fotoBase64; img.className = 'miniatura';
             const txt = document.createElement('div'); txt.innerText = pieDeFoto; txt.style = "font-size: 10px; color: #666; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;";
             divContenedor.appendChild(img); divContenedor.appendChild(txt); galeria.appendChild(divContenedor);
@@ -116,67 +120,69 @@
             const trans = db.transaction(["registros"], "readwrite");
             trans.objectStore("registros").add({ titulo: t, descripcion: document.getElementById('descripcion').value, latitud: latitudActual, longitud: longitudActual, fotos: fotosArray, fecha: new Date().toLocaleString() });
             trans.oncomplete = () => {
-                alert("✅ Guardado"); document.getElementById('titulo').value = ""; document.getElementById('descripcion').value = ""; latitudActual = null; longitudActual = null; document.getElementById('coordenadas-texto').innerHTML = "Latitud: --- <br> Longitud: ---"; fotosArray = []; galeria.innerHTML = "";
+                alert("✅ Guardado en memoria"); document.getElementById('titulo').value = ""; document.getElementById('descripcion').value = ""; latitudActual = null; longitudActual = null; document.getElementById('coordenadas-texto').innerHTML = "Latitud: --- <br> Longitud: ---"; fotosArray = []; galeria.innerHTML = "";
                 if(streamActual) { streamActual.getTracks().forEach(track => track.stop()); video.style.display = 'none'; btnCapturar.style.display = 'none'; btnEncender.style.display = 'flex'; }
+                
+                // Reiniciar los botones de exportación si se guardó algo nuevo
+                document.getElementById('contenedor-csv').innerHTML = '<button id="btn-preparar-csv" class="btn-csv">📊 1. Preparar Excel (CSV)</button>';
+                document.getElementById('contenedor-kmz').innerHTML = '<button id="btn-preparar-kmz" class="btn-kmz">🌍 2. Preparar Reporte KMZ</button>';
+                vincularBotones(); // Volver a activar las funciones
             };
         });
 
-        async function procesarArchivo(archivoFisico, nombreArchivo) {
-            if (navigator.canShare && navigator.canShare({ files: [archivoFisico] })) {
-                try { await navigator.share({ files: [archivoFisico], title: 'Reporte', text: 'Adjunto reporte de campo.' }); return; } catch (e) {}
+        // SISTEMA DE EXPORTACIÓN EN DOS PASOS (ANTI-BLOQUEOS)
+        function vincularBotones() {
+            const btnCsv = document.getElementById('btn-preparar-csv');
+            if(btnCsv) {
+                btnCsv.addEventListener('click', () => {
+                    db.transaction("registros").objectStore("registros").getAll().onsuccess = (e) => {
+                        const res = e.target.result; if(res.length === 0) return alert("Base vacía.");
+                        let csv = "ID,Titulo,Descripcion,Latitud,Longitud,Fecha\n";
+                        res.forEach(r => { csv += `${r.id},${r.titulo.replace(/,/g," ")},${r.descripcion.replace(/,/g," ")},${r.latitud},${r.longitud},${r.fecha}\n`; });
+                        
+                        // En lugar de forzar descarga, creamos un enlace nativo real
+                        const archivo = new Blob([csv], { type: "text/csv" });
+                        const url = URL.createObjectURL(archivo);
+                        document.getElementById('contenedor-csv').innerHTML = `<a href="${url}" download="Datos_Inspeccion.csv" class="btn-descarga-lista">✅ ¡Listo! Toca aquí para Guardar Excel</a>`;
+                    };
+                });
             }
-            const url = URL.createObjectURL(archivoFisico); const a = document.createElement("a"); a.href = url; a.download = nombreArchivo; document.body.appendChild(a); a.click(); document.body.removeChild(a);
-        }
 
-        document.getElementById('btn-descargar-csv').addEventListener('click', () => {
-            db.transaction("registros").objectStore("registros").getAll().onsuppress = (e) => {
-                const res = e.target.result; if(res.length === 0) return alert("Base vacía.");
-                let csv = "ID,Titulo,Descripcion,Latitud,Longitud,Fecha\n";
-                res.forEach(r => { csv += `${r.id},${r.titulo.replace(/,/g," ")},${r.descripcion.replace(/,/g," ")},${r.latitud},${r.longitud},${r.fecha}\n`; });
-                procesarArchivo(new File([csv], "Datos.csv", { type: "text/csv" }), "Datos.csv");
-            };
-        });
-
-        document.getElementById('btn-compartir-kmz').addEventListener('click', async () => {
-            if (typeof JSZip === 'undefined') return alert("Cargando...");
-            db.transaction("registros").objectStore("registros").getAll().onsuccess = async (e) => {
-                const res = e.target.result; if(res.length === 0) return alert("Base vacía.");
-                document.getElementById('btn-compartir-kmz').innerText = "⏳ Generando...";
-                const zip = new JSZip(); const imgFolder = zip.folder("images");
-                let kml = `<?xml version="1.0" encoding="UTF-8"?><kml xmlns="http://www.opengis.net/kml/2.2"><Document><name>Reporte</name>`;
-
-                res.forEach(r => {
-                    let html = `<div style="font-family:Arial, sans-serif;"><h3 style="color:#1e3a8a; border-bottom:2px solid #f59e0b;">${r.titulo}</h3><p><b>Fecha:</b> ${r.fecha}<br><b>Coordenadas:</b> ${r.latitud}, ${r.longitud}</p><p style="background:#f3f4f6; padding:8px;">${r.descripcion}</p>`;
+            const btnKmz = document.getElementById('btn-preparar-kmz');
+            if(btnKmz) {
+                btnKmz.addEventListener('click', async () => {
+                    if (typeof JSZip === 'undefined') return alert("Cargando la herramienta ZIP, espera un momento...");
                     
-                    // NUEVO: INSERTAR CADA FOTO CON SU PIE DE FOTO EN EL MACHOTE
-                    if(r.fotos) r.fotos.forEach((f, i) => {
-                        const name = `foto_${r.id}_${i}.jpg`;
-                        imgFolder.file(name, f.base64.split(',')[1], {base64: true});
-                        html += `<div style="margin-top:15px; background:#fff; padding:10px; border-radius:8px; border: 1px solid #ccc; text-align:center;">
-                                    <img src="images/${name}" style="width:100%; border-radius:4px;">
-                                    <p style="margin: 8px 0 0 0; font-size: 14px; color: #444;"><i>📸 ${f.descripcion}</i></p>
-                                 </div>`;
-                    });
-                    html += `</div>`;
-                    kml += `<Placemark><name>${r.titulo}</name><description><![CDATA[${html}]]></description><Point><coordinates>${r.longitud},${r.latitud}</coordinates></Point></Placemark>`;
-                });
-                kml += `</Document></kml>`; zip.file("doc.kml", kml);
-                const content = await zip.generateAsync({type:"blob"});
-                document.getElementById('btn-compartir-kmz').innerHTML = "🌍 Compartir Reporte KMZ";
-                procesarArchivo(new File([content], "Reporte_Campo.kmz", {type: "application/vnd.google-earth.kmz"}), "Reporte_Campo.kmz");
-            };
-        });
+                    db.transaction("registros").objectStore("registros").getAll().onsuccess = async (e) => {
+                        const res = e.target.result; if(res.length === 0) return alert("Base vacía.");
+                        
+                        document.getElementById('btn-preparar-kmz').innerText = "⏳ Empaquetando fotos...";
+                        
+                        const zip = new JSZip(); const imgFolder = zip.folder("images");
+                        let kml = `<?xml version="1.0" encoding="UTF-8"?><kml xmlns="http://www.opengis.net/kml/2.2"><Document><name>Reporte</name>`;
 
-        // BOTÓN DE AUTOLIMPIEZA (Para arreglar la cámara oscura y el WhatsApp)
-        document.getElementById('btn-reset').addEventListener('click', () => {
-            if ('serviceWorker' in navigator) {
-                navigator.serviceWorker.getRegistrations().then(function(registrations) {
-                    for(let registration of registrations) { registration.unregister(); }
-                    alert("🧹 Memoria del navegador limpiada exitosamente.\n\nLa aplicación se va a recargar ahora. ¡Tu cámara y exportaciones ya deben funcionar bien en modo normal!");
-                    window.location.reload(true);
+                        res.forEach(r => {
+                            let html = `<div style="font-family:Arial, sans-serif;"><h3 style="color:#1e3a8a; border-bottom:2px solid #f59e0b;">${r.titulo}</h3><p><b>Fecha:</b> ${r.fecha}<br><b>Coordenadas:</b> ${r.latitud}, ${r.longitud}</p><p style="background:#f3f4f6; padding:8px;">${r.descripcion}</p>`;
+                            if(r.fotos) r.fotos.forEach((f, i) => {
+                                const name = `foto_${r.id}_${i}.jpg`;
+                                imgFolder.file(name, f.base64.split(',')[1], {base64: true});
+                                html += `<div style="margin-top:15px; background:#fff; padding:10px; border-radius:8px; border: 1px solid #ccc; text-align:center;"><img src="images/${name}" style="width:100%; border-radius:4px;"><p style="margin: 8px 0 0 0; font-size: 14px; color: #444;"><i>📸 ${f.descripcion}</i></p></div>`;
+                            });
+                            html += `</div>`;
+                            kml += `<Placemark><name>${r.titulo}</name><description><![CDATA[${html}]]></description><Point><coordinates>${r.longitud},${r.latitud}</coordinates></Point></Placemark>`;
+                        });
+                        kml += `</Document></kml>`; zip.file("doc.kml", kml);
+                        
+                        const content = await zip.generateAsync({type:"blob"});
+                        
+                        // Crear el enlace nativo
+                        const url = URL.createObjectURL(content);
+                        document.getElementById('contenedor-kmz').innerHTML = `<a href="${url}" download="Reporte_Campo.kmz" class="btn-descarga-lista">✅ ¡Listo! Toca aquí para Guardar KMZ</a>`;
+                    };
                 });
             }
-        });
+        }
+        vincularBotones(); // Activar botones al cargar la página
     </script>
 </body>
 </html>
